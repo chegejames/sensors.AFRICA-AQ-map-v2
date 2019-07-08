@@ -1,46 +1,45 @@
+// import leaflet
 import leaflet from 'leaflet';
 import hash from 'leaflet-hash';
 import 'leaflet/dist/leaflet.css';
 
-//use d3-require to call from the internet
-
-import * as d3_TimeFormat from'd3-time-format';
-import * as d3_Selection from'd3-selection';
-import * as d3_Scale from'd3-scale';
-import * as d3_Geo from'd3-geo';
+// d3 libraries
 import * as d3_Hexbin from "d3-hexbin";
-import * as d3_Fetch from'd3-fetch';
-import * as d3_Time from'd3-time';
-import * as d3_Timer from'd3-timer';
-import * as d3_Array from'd3-array';
-import * as d3_Transistion from "d3-transition";
+import * as d3_Selection from 'd3-selection';
+import * as d3_Transition from "d3-transition";
+import {scaleLinear} from 'd3-scale';
+import {geoPath, geoTransform} from 'd3-geo';
+import {timeMinute} from 'd3-time';
+import {interval, timeout} from 'd3-timer';
+import {timeFormatLocale, timeParse} from 'd3-time-format';
+import {median} from 'd3-array';
 
-const d3 = Object.assign({},d3_Selection,d3_Scale,d3_Geo,d3_Hexbin,d3_Array,d3_Fetch,d3_Time,d3_TimeFormat,d3_Timer);
+const d3 = Object.assign({}, d3_Selection, d3_Hexbin);
+
+import api from './feinstaub-api';
+import * as config from './config.js';
 
 import '../css/style.css';
 import * as places from './places.js';
 import * as zooms from './zooms.js';
 import * as translate from './translate.js';
 
-//MAP
+// favicon config
+import './static-files'
 
-var hexagonheatmap;
-var hmhexaPM_aktuell;
-var hmhexaPM_AQI;
-var hmhexa_t_h_p;
+// declare variables
+let hexagonheatmap, hmhexaPM_aktuell, hmhexaPM_AQI, hmhexa_t_h_p;
 
-var map;
-var tiles;
+// selected value from the dropdown
+let user_selected_value = config.selection;
 
-var selector1 = "PM10";
+// save browser lanuage for translation
+const lang = translate.getFirstBrowserLanguage().substring(0, 2);
 
-var lang = 	lang = translate.getFirstBrowserLanguage().substring(0,2);
+let openedGraph1 = [];
+let timestamp_data = '';			// needs to be global to work over all 3 data streams
 
-var openedGraph1 = [];
-
-var is_click;
-
-var locale = d3.timeFormatLocale({
+const locale = timeFormatLocale({
 	"dateTime": "%Y.%m.%d %H:%M:%S",
 	"date": "%d.%m.%Y",
 	"time": "%H:%M:%S",
@@ -51,926 +50,615 @@ var locale = d3.timeFormatLocale({
 	"shortMonths": ["Jan.", "Feb.", "Mar.", "Apr.", "Mai", "Jun.", "Jul.", "Aug.", "Sep.", "Okt.", "Nov.", "Dez."]
 });
 
-var scale_options = {
-				"PM10":		{
-								valueDomain: [20, 40, 60, 100, 500],
-								colorRange: ['#00796B', '#F9A825', '#E65100', '#DD2C00', '#960084']	
-							},
-				"PM25":	{
-								valueDomain: [10, 20, 40, 60, 100],
-								colorRange: ['#00796B', '#F9A825', '#E65100', '#DD2C00', '#960084']	
-							},
-				"Official_AQI_US": {
-								valueDomain: [0,50,100,150,200,300],
-								colorRange: ['#00E400','#FFFF00','#FF7E00','#FF0000','rgb(143, 63, 151)','#7E0023']	
-							},
-				"Temperature": {
-								valueDomain: [-20, 0, 50],
-								colorRange: ['#0022FE', '#FFFFFF', '#FF0000']	
-							},
-				"Humidity": {
-								valueDomain: [0,100],
-								colorRange: ['#FFFFFF', '#0000FF']	
-							},
-				"Pressure": {
-								valueDomain: [926, 947.75, 969.50, 991.25, 1013, 1034.75, 1056.50, 1078.25, 1100],
-								colorRange: ["#dd2e97", "#6b3b8f", "#2979b9", "#02B9ed", "#13ae52", "#c9d841", "#fad635", "#f0a03d", "#892725"]	
-							}
-				};
-
-var titles = {
-				"PM10": "PM10 &micro;g/m&sup3;",
-				"PM25": "PM2.5 &micro;g/m&sup3;",
-				"Official_AQI_US": "AQI US",
-				"Temperature": "Temperature °C",
-				"Humidity": "Humidity %",
-				"Pressure": "Pressure hPa",
-			}
-
-var panelIDs = {
-					"PM10": [2,1],
-					"PM25": [2,1],
-					"Temperature": [4,3],
-					"Humidity": [6,5],
-					"Pressure": [8,7]
-}
-
-
-var div = d3.select("#sidebar").append("div")
-				.attr("id", "table")
-				.style("display", "none");
-
-var tooltipDiv = document.getElementsByClassName('tooltip-div');
-
-function console_log(text) {
-	console.log(text);
-}
-
-window.onmousemove = function (e) {
-	var x = e.clientX,
-	y = e.clientY;
-
-	for (var i = 0; i < tooltipDiv.length; i++) {
-		tooltipDiv.item(i).style.top = (y - 10 )+ 'px';
-		tooltipDiv.item(i).style.left = (x + 20) + 'px';
-	};
+const scale_options = {
+	"PM10": {
+		valueDomain: [20, 40, 60, 100, 500],
+		colorRange: ['#00796B', '#F9A825', '#E65100', '#DD2C00', '#960084']
+	},
+	"PM25": {
+		valueDomain: [10, 20, 40, 60, 100],
+		colorRange: ['#00796B', '#F9A825', '#E65100', '#DD2C00', '#960084']
+	},
+	"Official_AQI_US": {
+		valueDomain: [0, 50, 100, 150, 200, 300],
+		colorRange: ['#00E400', '#FFFF00', '#FF7E00', '#FF0000', 'rgb(143, 63, 151)', '#7E0023']
+	},
+	"Temperature": {
+		valueDomain: [-20, -10, 0, 10, 20, 30, 40],
+		colorRange: ['#4050B0', '#5679f9', '#55cbd9', '#a2cf4a', '#fedb64', '#fe8f52', '#e6380f']
+	},
+	"Humidity": {
+		valueDomain: [0, 20, 40, 60, 80, 100],
+		colorRange: ['#c41a0a', '#f47a0b', '#f4e60b', '#aff474', '#6dbcff', '#00528f']
+	},
+	"Pressure": {
+		valueDomain: [926, 947.75, 969.50, 991.25, 1013, 1034.75, 1056.50, 1078.25, 1100],
+		colorRange: ["#dd2e97", "#6b3b8f", "#2979b9", "#02B9ed", "#13ae52", "#c9d841", "#fad635", "#f0a03d", "#892725"]
+	}
 };
 
-var i=0;
-var telem;
-var search_values=location.search.replace('\?','').split('&');
-var query={}
-for(i=0;i<search_values.length;i++){
-    telem=search_values[i].split('=');
-    query[telem[0]]='';
-    if (typeof telem[1] != 'undefined') {
-		query[telem[0]]=telem[1];
+const titles = {
+	"PM10": "PM10 &micro;g/m&sup3;",
+	"PM25": "PM2.5 &micro;g/m&sup3;",
+	"Official_AQI_US": "AQI US",
+	"Temperature": "Temperature °C",
+	"Humidity": "Humidity %",
+	"Pressure": "Pressure hPa",
+};
+
+const panelIDs = {
+	"PM10": [2, 1],
+	"PM25": [2, 1],
+	"Temperature": [4, 3],
+	"Humidity": [6, 5],
+	"Pressure": [8, 7]
+};
+
+const div = d3.select("#sidebar").append("div").attr("id", "table").style("display", "none");
+
+const map = L.map('map', {zoomControl: true, minZoom: config.minZoom, maxZoom: config.maxZoom, doubleClickZoom: false});
+
+const tiles = L.tileLayer(config.tiles, {
+	attribution: config.attribution,
+	maxZoom: config.maxZoom,
+	minZoom: config.minZoom
+}).addTo(map);
+
+new L.Hash(map);
+
+// define query object
+const query = {
+	no_overlay: "false"
+};
+// iife function to read query parameter and fill query object
+(function () {
+	let telem;
+	const search_values = location.search.replace('\?', '').split('&');
+	for (let i = 0; i < search_values.length; i++) {
+		telem = search_values[i].split('=');
+		query[telem[0]] = '';
+		if (typeof telem[1] != 'undefined') query[telem[0]] = telem[1];
 	}
-}
+})();
 
-console.log("Query No overlay: "+query.nooverlay);
-if (typeof query.nooverlay !== "undefined") {
-	var nooverlay = true;
-} else {
-	document.getElementById("betterplace").style.display = "inline-block";
-}
+// show betterplace overlay
+if (query.no_overlay === "false") d3.select("#betterplace").style("display", "inline-block");
 
-//var cooCenter = [50.495171, 9.730827];
-//var zoomLevel = 6;
-var cooCenter = [0, 0];
-var zoomLevel = 2;
+let coordsCenter = config.center;
+let zoomLevel = config.zoom;
 
 if (location.hash) {
-	var hash_params = location.hash.split("/");
-	var cooCenter = [hash_params[1],hash_params[2]];
-	var zoomLevel = hash_params[0].substring(1);
+	const hash_params = location.hash.split("/");
+	coordsCenter = [hash_params[1], hash_params[2]];
+	zoomLevel = hash_params[0].substring(1);
 } else {
-	var hostname = location.hostname;
-	var hostname_parts = hostname.split(".");
-	if (hostname_parts.length == 4) {
-		var place = hostname_parts[0].toLowerCase();
-		console_log(place);
+	const hostname_parts = location.hostname.split(".");
+	if (hostname_parts.length === 4) {
+		const place = hostname_parts[0].toLowerCase();
+		console.log(place);
 		if (typeof places[place] !== 'undefined' && places[place] !== null) {
-			var cooCenter = places[place];
-			var zoomLevel = 11;
+			coordsCenter = places[place];
+			zoomLevel = 11;
 		}
-		if (typeof zooms[place] !== 'undefined' && zooms[place] !== null) {
-			var zoomLevel = zooms[place];
-		}
-		console_log("Center: "+cooCenter);
-		console_log("Zoom: "+zoomLevel);
+		if (typeof zooms[place] !== 'undefined' && zooms[place] !== null) zoomLevel = zooms[place];
+		console.log("Center: " + coordsCenter);
+		console.log("Zoom: " + zoomLevel);
 	}
-};
+}
 
-window.onload=function(){
+window.onload = function () {
+	//	HEXBINS
+	L.HexbinLayer = L.Layer.extend({
+		_undef(a) {
+			return typeof a === 'undefined';
+		},
+		options: {
+			radius: 25,
+			opacity: 0.6,
+			duration: 200,
+			onmouseover: undefined,
+			onmouseout: undefined,
+
+			/*	REVOIR LE DOUBLECLIQUE*/
+			click: function (e) {
+				timeout(function () {
+					if (map.clicked === 1) sensorNr(e);
+				}, 300);
+			},
+
+			lng: function (d) {
+				return d.longitude;
+			},
+			lat: function (d) {
+				return d.latitude;
+			},
+			value: function (d) { return data_median(d); },
+		},
+
+		initialize(options) {
+			L.setOptions(this, options);
+			this._data = [];
+			this._colorScale = scaleLinear()
+				.domain(this.options.valueDomain)
+				.range(this.options.colorRange)
+				.clamp(true);
+		},
+
+		// Make hex radius dynamic for different zoom levels to give a nicer overview of the sensors as well as making sure that the hex grid does not cover the whole world when zooming out
+		getFlexRadius() {
+			if (this.map.getZoom() < 3) {
+				return this.options.radius / (3 * (4 - this.map.getZoom()));
+			} else if (this.map.getZoom() > 2 && this.map.getZoom() < 8) {
+				return this.options.radius / (9 - this.map.getZoom());
+			} else {
+				return this.options.radius;
+			}
+		},
+
+		onAdd(map) {
+			this.map = map;
+			let _layer = this;
+
+			// SVG element
+			this._svg = L.svg();
+			map.addLayer(this._svg);
+			this._rootGroup = d3.select(this._svg._rootGroup).classed('d3-overlay', true);
+			this.selection = this._rootGroup;
+
+			// Init shift/scale invariance helper values
+			this._pixelOrigin = map.getPixelOrigin();
+			this._wgsOrigin = L.latLng([0, 0]);
+			this._wgsInitialShift = this.map.latLngToLayerPoint(this._wgsOrigin);
+			this._zoom = this.map.getZoom();
+			this._shift = L.point(0, 0);
+			this._scale = 1;
+
+			// Create projection object
+			this.projection = {
+				latLngToLayerPoint: function (latLng, zoom) {
+					zoom = _layer._undef(zoom) ? _layer._zoom : zoom;
+					let projectedPoint = _layer.map.project(L.latLng(latLng), zoom)._round();
+					return projectedPoint._subtract(_layer._pixelOrigin);
+				},
+				layerPointToLatLng: function (point, zoom) {
+					zoom = _layer._undef(zoom) ? _layer._zoom : zoom;
+					let projectedPoint = L.point(point).add(_layer._pixelOrigin);
+					return _layer.map.unproject(projectedPoint, zoom);
+				},
+				unitsPerMeter: 256 * Math.pow(2, _layer._zoom) / 40075017,
+				map: _layer.map,
+				layer: _layer,
+				scale: 1
+			};
+			this.projection._projectPoint = function (x, y) {
+				let point = _layer.projection.latLngToLayerPoint(new L.LatLng(y, x));
+				this.stream.point(point.x, point.y);
+			};
+
+			this.projection.pathFromGeojson = geoPath().projection(geoTransform({point: this.projection._projectPoint}));
+
+			// Compatibility with v.1
+			this.projection.latLngToLayerFloatPoint = this.projection.latLngToLayerPoint;
+			this.projection.getZoom = this.map.getZoom.bind(this.map);
+			this.projection.getBounds = this.map.getBounds.bind(this.map);
+			this.selection = this._rootGroup; // ???
+
+			// Initial draw
+			this.draw();
+		},
+
+		onRemove(map) {
+			if (this._container != null) this._container.remove();
+
+			// Remove events
+			map.off({'moveend': this._redraw}, this);
+			this._container = null;
+			this._map = null;
+
+			// Explicitly will leave the data array alone in case the layer will be shown again
+			// this._data = [];
+		},
+
+		addTo(map) {
+			map.addLayer(this);
+			return this;
+		},
+
+		_disableLeafletRounding() {
+			this._leaflet_round = L.Point.prototype._round;
+			L.Point.prototype._round = function () {
+				return this;
+			};
+		},
+
+		_enableLeafletRounding() {
+			L.Point.prototype._round = this._leaflet_round;
+		},
+
+		draw() {
+			this._disableLeafletRounding();
+			this._redraw(this.selection, this.projection, this.map.getZoom());
+			this._enableLeafletRounding();
+		},
+		getEvents: function () {
+			return {zoomend: this._zoomChange};
+		},
+
+		_zoomChange: function () {
+			let mapZoom = map.getZoom();
+			let MapCenter = map.getCenter();
+			this._disableLeafletRounding();
+			let newZoom = this._undef(mapZoom) ? this.map._zoom : mapZoom;
+			this._zoomDiff = newZoom - this._zoom;
+			this._scale = Math.pow(2, this._zoomDiff);
+			this.projection.scale = this._scale;
+			this._shift = this.map.latLngToLayerPoint(this._wgsOrigin)
+				._subtract(this._wgsInitialShift.multiplyBy(this._scale));
+			let shift = ["translate(", this._shift.x, ",", this._shift.y, ") "];
+			let scale = ["scale(", this._scale, ",", this._scale, ") "];
+			this._rootGroup.attr("transform", shift.concat(scale).join(""));
+			this.draw();
+			this._enableLeafletRounding();
+		},
+		_redraw(selection, projection, zoom) {
+			// Generate the mapped version of the data
+			let data = this._data.map((d) => {
+				let lng = this.options.lng(d);
+				let lat = this.options.lat(d);
+				let point = projection.latLngToLayerPoint([lat, lng]);
+				return {o: d, point: point};
+			});
+
+			// Select the hex group for the current zoom level. This has
+			// the effect of recreating the group if the zoom level has changed
+			let join = selection.selectAll('g.hexbin')
+				.data([zoom], (d) => d);
+
+			// enter
+			join.enter().append('g')
+				.attr('class', (d) => 'hexbin zoom-' + d);
+
+			// exit
+			join.exit().remove();
+
+			// add the hexagons to the select
+			this._createHexagons(join, data, projection);
+
+		},
+
+		_createHexagons(g, data, projection) {
+			// Create the bins using the hexbin layout
+			let hexbin = d3.hexbin()
+				.radius(this.getFlexRadius() / projection.scale)
+				.x((d) => d.point.x)
+				.y((d) => d.point.y);
+			let bins = hexbin(data);
+
+			// Join - Join the Hexagons to the data
+			let join = g.selectAll('path.hexbin-hexagon')
+				.data(bins);
+
+			// Update - set the fill and opacity on a transition (opacity is re-applied in case the enter transition was cancelled)
+			join.transition().duration(this.options.duration)
+				.attr('fill', (d) => typeof this.options.value(d) === 'undefined' ? '#808080' : this._colorScale(this.options.value(d)))
+				.attr('fill-opacity', this.options.opacity)
+				.attr('stroke-opacity', this.options.opacity);
+
+			// Enter - establish the path, the fill, and the initial opacity
+			join.enter().append('path').attr('class', 'hexbin-hexagon')
+				.attr('d', (d) => 'M' + d.x + ',' + d.y + hexbin.hexagon())
+				.attr('fill', (d) => typeof this.options.value(d) === 'undefined' ? '#808080' : this._colorScale(this.options.value(d)))
+				.attr('fill-opacity', 0.01)
+				.attr('stroke-opacity', 0.01)
+				.on('mouseover', this.options.mouseover)
+				.on('mouseout', this.options.mouseout)
+				.on('click', this.options.click)
+				.transition().duration(this.options.duration)
+				.attr('fill-opacity', this.options.opacity)
+				.attr('stroke-opacity', this.options.opacity);
+
+			// Exit
+			join.exit()
+				.transition().duration(this.options.duration)
+				.attr('fill-opacity', 0.01)
+				.attr('stroke-opacity', 0.01)
+				.remove();
+		},
+		data(data) {
+			this._data = (data != null) ? data : [];
+			this.draw();
+			return this;
+		}
+	});
+
+	L.hexbinLayer = function (options) {
+		return new L.HexbinLayer(options);
+	};
 
 	// enable elements
-	document.getElementById('custom-select').style.display='inline-block';
-	document.getElementById('legend_PM10').style.display='block';
-	document.getElementById('close').innerHTML=translate.tr(lang,'(close)');
-	document.getElementById('explanation').innerHTML=translate.tr(lang,'Show explanation');
-	document.getElementById('map-info').innerHTML=translate.tr(lang,"<p>The hexagons represent the median of the current values of the sensors which are contained in the area, according to the option selected (PM10, PM2.5, temperature, relative humidity, pressure, AQI). You can refer to the scale on the left side of the map.</p> \
+	// d3.select('#legend_PM10').style("display", "block");
+	d3.select('#explanation').html(translate.tr(lang, 'Show explanation'));
+	d3.select('#map-info').html(translate.tr(lang, "<p>The hexagons represent the median of the current values of the sensors which are contained in the area, according to the option selected (PM10, PM2.5, temperature, relative humidity, pressure, AQI). You can refer to the scale on the left side of the map.</p> \
 <p>By clicking on a hexagon, you can display a list of all the corresponding sensors as a table. The first column lists the sensor-IDs. In the first line, you can see the amount of sensor in the area and the median value.</p> \
 <p>By clicking on the plus symbol next to a sensor ID, you can display two graphics: the individual measurements for the last 24 hours and the 24 hours floating mean for the last seven days. For technical reasons, the first of the 8 days displayed on the graphic has to stay empty.\
 The values are refreshed every 5 minutes in order to fit with the measurement frequency of the Airrohr sensors.</p> \
-<p>The Air Quality Index (AQI) is calculated according to the recommandations of the United States Environmental Protection Agency. Further information is available on the official page.(<a href='https://www.airnow.gov/index.cfm?action=aqibasics.aqi'>Link</a>). Hover over the AQI scale to display the levels of health concern.</p>");
-	document.getElementById('betterplace').innerHTML="<a title='"+translate.tr(lang,"Donate for Luftdaten.info (Hardware, Software) now on Betterplace.org")+" target='_blank' href='https://www.betterplace.org/de/projects/38071-fur-den-feinstaub-sensor-sds011-als-bastel-kit-spenden/'>"+translate.tr(lang,"Donate for<br/>Luftdaten.info<br/>now on<br/><span>Betterplace.org</span>")+"</a>";
+<p>The Air Quality Index (AQI) is calculated according to the recommandations of the United States Environmental Protection Agency. Further information is available on the official page.(<a href='https://www.airnow.gov/index.cfm?action=aqibasics.aqi'>Link</a>). Hover over the AQI scale to display the levels of health concern.</p>"));
+	d3.select('#betterplace').html("<a title='" + translate.tr(lang, "Donate for Luftdaten.info (Hardware, Software) now on Betterplace.org") + " target='_blank' href='https://www.betterplace.org/de/projects/38071-fur-den-feinstaub-sensor-sds011-als-bastel-kit-spenden/'>" + translate.tr(lang, "Donate for<br/>Luftdaten.info<br/>now on<br/><span>Betterplace.org</span>") + "</a>");
 
-	var custom_select = document.getElementById('custom-select');
-	var select_options = custom_select.getElementsByTagName('select')[0].getElementsByTagName('option');
-	for (var i=0; i < select_options.length; i++) {
-		select_options[i].innerHTML = translate.tr(lang, select_options[i].innerHTML);
-	}
+	d3.select("#menu").on("click", toggleSidebar);
+	d3.select("#explanation").on("click", toggleExplanation);
+	d3.select("#legend_Official_AQI_US").selectAll(".tooltip").on("click", function () {
+		window.open('https://www.airnow.gov/index.cfm?action=aqibasics.aqi', '_blank');
+		return false;
+	});
+	d3.select("#AQI_Good").html(" " + translate.tr(lang, "Good<div class='tooltip-div'>Air quality is considered satisfactory, and air pollution poses little or no risk.</div>"));
+	d3.select("#AQI_Moderate").html(" " + translate.tr(lang, "Moderate<div class='tooltip-div'>Air quality is acceptable; however, for some pollutants there may be a moderate health concern for a very small number of people who are unusually sensitive to air pollution.</div>"));
+	d3.select("#AQI_Unhealthy_Sensitive").html(" " + translate.tr(lang, "Unhealthy for Sensitive Groups<div class='tooltip-div'>Members of sensitive groups may experience health effects. The general public is not likely to be affected.</div>"));
+	d3.select("#AQI_Unhealthy").html(" " + translate.tr(lang, "Unhealthy<div class='tooltip-div'>Everyone may begin to experience health effects; members of sensitive groups may experience more serious health effects.</div>"));
+	d3.select("#AQI_Very_Unhealthy").html(" " + translate.tr(lang, "Very Unhealthy<div class='tooltip-div'>Health alert: everyone may experience more serious health effects.</div>"));
+	d3.select("#AQI_Hazardous").html(" " + translate.tr(lang, "Hazardous<div class='tooltip-div'>Health warnings of emergency conditions. The entire population is more likely to be affected.</div>"));
 
-	map.setView(cooCenter, zoomLevel);
-	
+	//	Select
+	const custom_select = d3.select("#custom-select");
+	custom_select.select("select").selectAll("option").each(function () {
+		d3.select(this).text(translate.tr(lang, d3.select(this).text()));
+	});
+	custom_select.select("select").property("value", config.selection);
+	custom_select.append("div").attr("class", "select-selected").html(translate.tr(lang,
+		custom_select.select("select").select("option:checked").text())).on("click", showAllSelect);
+	custom_select.style("display", "inline-block");
+
+	switchLegend(user_selected_value);
+
+	map.setView(coordsCenter, zoomLevel);
 	map.clicked = 0;
-	
-	selector1 = document.getElementById('custom-select').getElementsByTagName('select')[0].value;
-
-	console_log(selector1);
-
-	hexagonheatmap = L.hexbinLayer(scale_options[selector1]).addTo(map);
-
-	switch_legend(selector1);	
+	hexagonheatmap = L.hexbinLayer(scale_options[user_selected_value]).addTo(map);
 
 //	REVOIR ORDRE DANS FONCTION READY
+	function retrieveData() {
+		api.getData("https://maps.luftdaten.info/data/v2/data.dust.min.json", 1).then(function (result) {
+			hmhexaPM_aktuell = result.cells;
+			if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
+			ready(1);
+			api.getData("https://maps.luftdaten.info/data/v2/data.24h.json", 2).then(function (result) {
+				hmhexaPM_AQI = result.cells;
+				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
+				ready(2);
+			});
+			api.getData("https://maps.luftdaten.info/data/v2/data.temp.min.json", 3).then(function (result) {
+				hmhexa_t_h_p = result.cells;
+				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
+				ready(3);
+			});
+		});
+	}
 
-	d3.json("https://maps.luftdaten.info/data/v2/data.dust.min.json").then(function(data){ready(data,1);
-		d3.json("https://maps.luftdaten.info/data/v2/data.24h.json").then(function(data){ready(data,2)});
-		d3.json("https://maps.luftdaten.info/data/v2/data.temp.min.json").then(function(data){ready(data,3)});
-	})
+	//retrieve data from api
+	retrieveData();
 
-	d3.interval(function(){
-
+	// refresh data
+	interval(function () {
 		d3.selectAll('path.hexbin-hexagon').remove();
-
-		d3.json("https://maps.luftdaten.info/data/v2/data.dust.min.json").then(function(data){ready(data,1);
-			d3.json("https://maps.luftdaten.info/data/v2/data.24h.json").then(function(data){ready(data,2)});
-			d3.json("https://maps.luftdaten.info/data/v2/data.temp.min.json").then(function(data){ready(data,3)});
-		})
-
-		console_log('reload')
-
+		retrieveData();
 	}, 300000);
-	
-	map.on('moveend', function() {hexagonheatmap._zoomChange();});
-	map.on('move', function() {});
+
+	map.on('moveend', function () {
+		hexagonheatmap._zoomChange();
+	});
+	map.on('move', function () {
+	});
 
 //	REVOIR LE DOUBLECLIQUE
 
-	map.on('click', function(e) {
-		console_log('Click');
-		map.clicked = map.clicked + 1;
-		d3.timeout(function() {
-			if(map.clicked == 1){
-				map.setView([e.latlng.lat, e.latlng.lng], map.getZoom());
+	map.on('click', function (e) {
+		/* if the user clicks anywhere outside the opened select drop down, then close all select boxes */
+		if (! d3.select("#custom-select").select(".select-items").empty()) {
+			d3.select("#custom-select").select(".select-items").remove();
+		} else {
+			map.clicked = map.clicked + 1;
+			timeout(function () {
+				if (map.clicked === 1) {
+					map.setView([e.latlng.lat, e.latlng.lng], map.getZoom());
+				}
 				map.clicked = 0;
-			}
-		}, 300);
+			}, 300);
+		}
 	});
-	map.on('dblclick', function(e) {
-		console_log('Doubleclick');
+	map.on('dblclick', function () {
 		map.clicked = 0;
 		map.zoomIn();
 	});
 };
 
-map = L.map('map',{ zoomControl:true,minZoom:1,doubleClickZoom:false});
-
-new L.Hash(map);
-
-tiles = L.tileLayer('https://maps.luftdaten.info/tiles/{z}/{x}/{y}.png',{
-			attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
-			maxZoom: 16}).addTo(map);
-
-function switch_legend(val) {
-	var legends = document.getElementById('legendcontainer').querySelectorAll("[id^=legend_]");
-	console_log(legends);
-	for (var i=0; i < legends.length; i++) {
-		legends[i].style.display = 'none';
-	}
-	document.getElementById('legend_'+val).style.display='block';
+function data_median(data) {
+	var d_temp = data.filter(d => !d.o.indoor);
+	return median(d_temp, (o) => o.o.data[user_selected_value]);
 }
 
-function isNumber(obj) {
-	return obj !== undefined && typeof(obj) === 'number' && !isNaN(obj);
+function switchLegend(val) {
+	d3.select('#legendcontainer').selectAll("[id^=legend_]").style("display", "none");
+	d3.select('#legend_' + val).style("display", "block");
 }
 
-function check_values(obj) {
-	var result = false;
-	if (isNumber(obj)) {
-		if ((selector1 == "Humidity") && (obj >=0 ) && (obj <= 100)) { result = true; }
-		else if ((selector1 == "Temperature") && (obj <= 70 && obj >= -50)) { result = true; }
-		else if ((selector1 == "Pressure") && (obj >= 850) && (obj < 1200)) { result = true; }
-		else if ((selector1 == "PM10") && (obj < 1900)) { result = true; }
-		else if ((selector1 == "PM25") && (obj < 900)) { result = true; }
-	}
-	return result;
+/*  Menu and Dropdown */
+function openSidebar() {
+	document.getElementById("menu").innerHTML = "&#10006;";
+	document.getElementById("sidebar").style.display = "block";
 }
 
-function ready(data,num) {
-
-	if (num == 1) {
-		hmhexaPM_aktuell = data.reduce(function(filtered, item) {
-			if (item.sensor.sensor_type.name == "SDS011" || item.sensor.sensor_type.name == "PMS1003" || item.sensor.sensor_type.name == "PMS3003" || item.sensor.sensor_type.name == "PMS5003" || item.sensor.sensor_type.name == "PMS6003" || item.sensor.sensor_type.name == "PMS7003" || item.sensor.sensor_type.name == "HPM" || item.sensor.sensor_type.name == "SPS30") {
-				filtered.push({"data":{"PM10": parseInt(getRightValue(item.sensordatavalues,"P1")) , "PM25":parseInt( getRightValue(item.sensordatavalues,"P2"))}, "id":item.sensor.id, "latitude":item.location.latitude,"longitude":item.location.longitude})
-			}
-			return filtered;
-		}, []);
-//		console_log(hmhexaPM_aktuell);
-
-	} else if (num == 2) {
-
-		hmhexaPM_AQI = data.reduce(function(filtered, item) {
-			if (item.sensor.sensor_type.name == "SDS011" || item.sensor.sensor_type.name == "PMS1003" || item.sensor.sensor_type.name == "PMS3003" || item.sensor.sensor_type.name == "PMS5003" || item.sensor.sensor_type.name == "PMS6003" || item.sensor.sensor_type.name == "PMS7003" || item.sensor.sensor_type.name == "HPM" || item.sensor.sensor_type.name == "SPS30") {
-				var data_in = {"PM10": parseInt(getRightValue(item.sensordatavalues,"P1")), "PM25": parseInt(getRightValue(item.sensordatavalues,"P2"))}
-				var data_out = officialaqius(data_in);
-				if (typeof data_out != 'undefined') {
-					filtered.push({"data":{"Official_AQI_US": data_out.AQI, "origin": data_out.origin, "PM10_24h": data_in.PM10, "PM25_24h": data_in.PM25}, "id":item.sensor.id, "latitude":item.location.latitude,"longitude":item.location.longitude})
-				} else {
-					console_log("Failed:");
-					console_log(item);
-				}
-			}
-			return filtered;
-		}, []);
-//		console_log(hmhexaPM_AQI);
-
-	} else {
-
-//		REVOIR LES TYPES DE SENSORS
-
-		hmhexa_t_h_p = data.reduce(function(filtered, item) {
-			filtered.push({"data":{"Pressure":parseInt(getRightValue(item.sensordatavalues,"pressure_at_sealevel"))/100, "Humidity":parseInt(getRightValue(item.sensordatavalues,"humidity")), "Temperature":parseInt(getRightValue(item.sensordatavalues,"temperature"))}, "id":item.sensor.id, "latitude":item.location.latitude,"longitude":item.location.longitude})
-			return filtered;
-		}, []);
-	}
-
-	var dateParser = d3.timeParse("%Y-%m-%d %H:%M:%S");
-	var timestamp = dateParser(data[0].timestamp);
-
-//	console_log(timestamp);
-
-	var localTime = new Date();
-	var timeOffset = localTime.getTimezoneOffset();
-
-//	console_log(timeOffset);
-
-	var newTime = d3.timeMinute.offset(timestamp, -(timeOffset));
-
-//	console_log(newTime);
-
-//	var dateFormater = d3.timeFormat("%A %d %B %Y %H:%M:%S");
-
-//	var dateFormater = locale.format("%A, %d. %B %Y, um %H:%M:%S");
-	var dateFormater = locale.format("%H:%M:%S");
-
-	document.getElementById('update').innerHTML = translate.tr(lang,"Last update")+": " + dateFormater(newTime);
-
-//	document.getElementById('update').innerHTML = "Last update: " + data[0][0].timestamp;
-	
-	if(num == 1 && (selector1 == "PM10" || selector1 == "PM25")) {hexagonheatmap.initialize(scale_options[selector1]);hexagonheatmap.data(hmhexaPM_aktuell.filter(function(value){return check_values(value.data[selector1]);}));};
-	if(num == 2 && selector1 == "Official_AQI_US"){hexagonheatmap.initialize(scale_options[selector1]);hexagonheatmap.data(hmhexaPM_AQI);};
-	if(num == 3 && (selector1 == "Temperature" || selector1 == "Humidity" || selector1 == "Pressure" )){hexagonheatmap.initialize(scale_options[selector1]);hexagonheatmap.data(hmhexa_t_h_p.filter(function(value){return check_values(value.data[selector1]);}));};
-
-	document.getElementById('loading').style.display='none';
-
-};
-
-function reload(val){
-	d3.selectAll('path.hexbin-hexagon').remove();
+function closeSidebar() {
+	document.getElementById("menu").innerHTML = "&#9776;";
+	document.getElementById("sidebar").style.display = "none";
 	d3.select("#results").remove();
-	document.getElementById('sidebar').style.display='none';
-
-	console_log(val);
-
-	selector1 = val;
-	
-	switch_legend(selector1);
-
-	hexagonheatmap.initialize(scale_options[selector1]);
-
-	if (val == "PM10" || val == "PM25") {
-		hexagonheatmap.data(hmhexaPM_aktuell.filter(function(value){return check_values(value.data[val]);}));
-	} else if (val == "Official_AQI_US") {
-		hexagonheatmap.data(hmhexaPM_AQI);
-	} else if (val == "Temperature" || val == "Humidity" || val == "Pressure") {
-		hexagonheatmap.data(hmhexa_t_h_p.filter(function(value){return check_values(value.data[val]);}));
-	}
-
-	if (document.getElementById("sidebar").style.display === "block") {
-		document.getElementById("sidebar").style.display = "none";
-		if(!d3.select("#results").empty()){
-			d3.select("#results").remove();
-		};
-	};
-
-};
-
-function getRightValue(array,type){
-	var value;
-	array.forEach(function(item){
-		if (item.value_type == type){value = item.value;};
-	});
-	return value;
-};
-
-function color(val){
-	var col= parseInt(val);
-
-	if(val>= 0 && val < 25){ return "#00796b";};
-	if(val>= 25 && val < 50){
-		var couleur = interpolColor('#00796b','#f9a825',(col-25)/25);
-		return couleur;
-	};
-	if(val>= 50 && val < 75){
-		var couleur = interpolColor('#f9a825','#e65100',(col-50)/25);
-		return couleur;
-	};
-	if(val>= 75 && val < 100){
-		var couleur = interpolColor('#e65100','#dd2c00',(col-75)/25);
-		return couleur;
-	};
-	if(val>=100 && val < 500){
-		var couleur = interpolColor('#dd2c00','#8c0084',(col-100)/400);
-		return couleur;
-	};
-
-	if(val>=100 && val < 500){ return "#8c0084";};
-};
-
-function interpolColor(a, b, amount) {
-	var ah = parseInt(a.replace(/#/g, ''), 16),
-			ar = ah >> 16, ag = ah >> 8 & 0xff, ab = ah & 0xff,
-			bh = parseInt(b.replace(/#/g, ''), 16),
-			br = bh >> 16, bg = bh >> 8 & 0xff, bb = bh & 0xff,
-			rr = ar + amount * (br - ar),
-			rg = ag + amount * (bg - ag),
-			rb = ab + amount * (bb - ab);
-//	console_log('#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb | 0).toString(16).slice(1));
-	return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb | 0).toString(16).slice(1);
-};
-
-//MENU
-
-function close_sidebar() {
-	var x = document.getElementById("sidebar");
-
-	if (x.style.display === "block") {
-		x.style.display = "none";
-		if(!d3.select("#results").empty()){
-			d3.select("#results").remove();
-		};
-	} else {
-		x.style.display = "block";
-	};
 }
 
-var menu = document.getElementById("menu");
-menu.addEventListener("click", close_sidebar);
+function toggleSidebar() {
+	if (document.getElementById("sidebar").style.display === "block") {
+		closeSidebar();
+	} else {
+		openSidebar()
+	}
+}
 
-var close_link = document.getElementById("close");
-close_link.addEventListener("click", close_sidebar);
-
-var erkl = document.getElementById("explanation");
-erkl.addEventListener("click", function(e) {
-
-	var x = document.getElementById("map-info");
-
+function toggleExplanation() {
+	const x = document.getElementById("map-info");
 	if (x.style.display === "none") {
 		x.style.display = "block";
-		document.getElementById("explanation").innerHTML = translate.tr(lang,"Hide explanation");
+		d3.select("#explanation").html(translate.tr(lang, "Hide explanation"));
 	} else {
 		x.style.display = "none";
-		document.getElementById("explanation").innerHTML = translate.tr(lang,"Show explanation");
-	};
-});
-
-//HEXBINS
-
-L.HexbinLayer = L.Layer.extend({
-	_undef (a) { return typeof a === 'undefined' },
-	options: {
-		radius: 25,
-		opacity: 0.6,
-		duration: 200,
-		onmouseover: undefined,
-		onmouseout: undefined,
-
-//		REVOIR LE DOUBLECLIQUE
-
-		click: 	function(e) {
-					d3.timeout(function() {
-						if(map.clicked == 1){
-							sensorNr(e);
-						}
-					}, 300)},
-
-		lng: function (d) {
-			return d.longitude
-		},
-		lat: function (d) {
-			return d.latitude
-		},
-		value: function (d) {
-
-//			Median everywhere!
-			return d3.median(d, (o) => o.o.data[selector1]);
-
-		}
-	},
-
-	initialize (options) {
-		L.setOptions(this, options)
-		this._data = []
-		this._colorScale = d3.scaleLinear()
-			.domain(this.options.valueDomain)
-			.range(this.options.colorRange)
-			.clamp(true)
-	},
-
-//	Make hex radius dynamic for different zoom levels to give a nicer overview of the sensors as well as making sure that the hex grid does not cover the whole world when zooming out
-	getFlexRadius () {
-		if (this.map.getZoom() < 3) {
-			return this.options.radius / (3 * (4 - this.map.getZoom()))
-		} else if (this.map.getZoom() > 2 && this.map.getZoom() < 8) {
-			return this.options.radius / (9 - this.map.getZoom())
-		} else {
-			return this.options.radius
-		}
-	},
-
-	onAdd (map) {
-		this.map = map
-		let _layer = this
-
-		// SVG element
-		this._svg = L.svg()
-		map.addLayer(this._svg)
-		this._rootGroup = d3.select(this._svg._rootGroup).classed('d3-overlay', true)
-		this.selection = this._rootGroup
-
-		// Init shift/scale invariance helper values
-		this._pixelOrigin = map.getPixelOrigin()
-		this._wgsOrigin = L.latLng([0, 0])
-		this._wgsInitialShift = this.map.latLngToLayerPoint(this._wgsOrigin)
-		this._zoom = this.map.getZoom()
-		this._shift = L.point(0, 0)
-		this._scale = 1
-
-		// Create projection object
-		this.projection = {
-			latLngToLayerPoint: function (latLng, zoom) {
-				zoom = _layer._undef(zoom) ? _layer._zoom : zoom
-				let projectedPoint = _layer.map.project(L.latLng(latLng), zoom)._round()
-				return projectedPoint._subtract(_layer._pixelOrigin)
-			},
-			layerPointToLatLng: function (point, zoom) {
-				zoom = _layer._undef(zoom) ? _layer._zoom : zoom
-				let projectedPoint = L.point(point).add(_layer._pixelOrigin)
-				return _layer.map.unproject(projectedPoint, zoom)
-			},
-			unitsPerMeter: 256 * Math.pow(2, _layer._zoom) / 40075017,
-			map: _layer.map,
-			layer: _layer,
-			scale: 1
-		}
-		this.projection._projectPoint = function (x, y) {
-			let point = _layer.projection.latLngToLayerPoint(new L.LatLng(y, x))
-			this.stream.point(point.x, point.y)
-		}
-
-		this.projection.pathFromGeojson = d3.geoPath().projection(d3.geoTransform({point: this.projection._projectPoint}))
-
-		// Compatibility with v.1
-		this.projection.latLngToLayerFloatPoint = this.projection.latLngToLayerPoint
-		this.projection.getZoom = this.map.getZoom.bind(this.map)
-		this.projection.getBounds = this.map.getBounds.bind(this.map)
-		this.selection = this._rootGroup // ???
-
-		// Initial draw
-		this.draw()
-	},
-
-	onRemove (map) {
-		if (this._container != null)
-			this._container.remove()
-
-		// Remove events
-		map.off({'moveend': this._redraw}, this)
-
-		this._container = null
-		this._map = null
-
-		// Explicitly will leave the data array alone in case the layer will be shown again
-		// this._data = [];
-	},
-
-	addTo (map) {
-		map.addLayer(this)
-		return this
-	},
-
-	_disableLeafletRounding () {
-		this._leaflet_round = L.Point.prototype._round
-		L.Point.prototype._round = function () { return this }
-	},
-
-	_enableLeafletRounding () {
-		L.Point.prototype._round = this._leaflet_round
-	},
-
-	draw () {
-		this._disableLeafletRounding()
-		this._redraw(this.selection, this.projection, this.map.getZoom())
-		this._enableLeafletRounding()
-	},
-	getEvents: function () { return {zoomend: this._zoomChange} },
-
-	_zoomChange: function () {
-
-		let mapZoom = map.getZoom()
-		let MapCenter = map.getCenter()
-		this._disableLeafletRounding()
-		let newZoom = this._undef(mapZoom) ? this.map._zoom : mapZoom
-		this._zoomDiff = newZoom - this._zoom
-		this._scale = Math.pow(2, this._zoomDiff)
-		this.projection.scale = this._scale
-		this._shift = this.map.latLngToLayerPoint(this._wgsOrigin)
-				._subtract(this._wgsInitialShift.multiplyBy(this._scale))
-		let shift = ["translate(", this._shift.x, ",", this._shift.y, ") "]
-		let scale = ["scale(", this._scale, ",", this._scale,") "]
-		this._rootGroup.attr("transform", shift.concat(scale).join(""))
-		this.draw()
-		this._enableLeafletRounding()
-	},
-	_redraw(selection, projection, zoom){
-		// Generate the mapped version of the data
-		let data = this._data.map( (d) => {
-			let lng = this.options.lng(d)
-			let lat = this.options.lat(d)
-
-			let point = projection.latLngToLayerPoint([lat, lng])
-			return { o: d, point: point }
-		});
-
-		// Select the hex group for the current zoom level. This has
-		// the effect of recreating the group if the zoom level has changed
-		let join = selection.selectAll('g.hexbin')
-			.data([zoom], (d) => d)
-
-
-		// enter
-		join.enter().append('g')
-			.attr('class', (d) => 'hexbin zoom-' + d)
-
-		// exit
-		join.exit().remove()
-
-
-		// add the hexagons to the select
-		this._createHexagons(join, data, projection)
-
-	},
-
-	_createHexagons(g, data, projection) {
-		// Create the bins using the hexbin layout
-
-		let hexbin = d3.hexbin()
-			.radius(this.getFlexRadius() / projection.scale)
-			.x( (d) => d.point.x )
-			.y( (d) => d.point.y )
-		let bins = hexbin(data)
-
-//		console_log(bins)
-
-		// Join - Join the Hexagons to the data
-		let join = g.selectAll('path.hexbin-hexagon')
-			.data(bins)
-
-
-		// Update - set the fill and opacity on a transition (opacity is re-applied in case the enter transition was cancelled)
-		join.transition().duration(this.options.duration)
-			.attr('fill', (d) => this._colorScale(this.options.value(d)))
-			.attr('fill-opacity', this.options.opacity)
-			.attr('stroke-opacity', this.options.opacity)
-
-		// Enter - establish the path, the fill, and the initial opacity
-		join.enter().append('path').attr('class', 'hexbin-hexagon')
-			.attr('d', (d) => 'M' + d.x + ',' + d.y + hexbin.hexagon())
-			.attr('fill', (d) => this._colorScale(this.options.value(d)))
-			.attr('fill-opacity', 0.01)
-			.attr('stroke-opacity', 0.01)
-			.on('mouseover', this.options.mouseover)
-			.on('mouseout', this.options.mouseout)
-			.on('click', this.options.click)
-			.transition().duration(this.options.duration)
-				.attr('fill-opacity', this.options.opacity)
-				.attr('stroke-opacity', this.options.opacity)
-
-		// Exit
-		join.exit().transition().duration(this.options.duration)
-			.attr('fill-opacity', 0.01)
-			.attr('stroke-opacity', 0.01)
-			.remove()
-	},
-	data (data) {
-		this._data = (data != null) ? data : []
-		this.draw()
-		return this
+		d3.select("#explanation").html(translate.tr(lang, "Show explanation"));
 	}
-});
+}
 
-L.hexbinLayer = function(options) {
-	return new L.HexbinLayer(options);
-};
+function ready(num) {
+	const dateParser = timeParse("%Y-%m-%d %H:%M:%S");
+	const timestamp = dateParser(timestamp_data);
+	const localTime = new Date();
+	const timeOffset = localTime.getTimezoneOffset();
+	const newTime = timeMinute.offset(timestamp, -(timeOffset));
+	const dateFormater = locale.format("%H:%M:%S");
 
+	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + dateFormater(newTime));
 
-function sensorNr(data){
+	if (num === 1 && (user_selected_value === "PM10" || user_selected_value === "PM25")) {
+		hexagonheatmap.initialize(scale_options[user_selected_value]);
+		hexagonheatmap.data(hmhexaPM_aktuell);
+	}
+	if (num === 2 && user_selected_value === "Official_AQI_US") {
+		hexagonheatmap.initialize(scale_options[user_selected_value]);
+		hexagonheatmap.data(hmhexaPM_AQI);
+	}
+	if (num === 3 && (user_selected_value === "Temperature" || user_selected_value === "Humidity" || user_selected_value === "Pressure")) {
+		hexagonheatmap.initialize(scale_options[user_selected_value]);
+		hexagonheatmap.data(hmhexa_t_h_p.filter(function (value) {
+			return api.checkValues(value.data[user_selected_value], user_selected_value);
+		}));
+	}
+	d3.select("#loading").style("display", "none");
+}
 
-	var inner_pre = "#";
-	
-	if (selector1 != "Official_AQI_US") {
-		inner_pre = "(+) #"
+function reloadMap(val) {
+	d3.selectAll('path.hexbin-hexagon').remove();
+
+	closeSidebar();
+	switchLegend(val);
+
+	hexagonheatmap.initialize(scale_options[val]);
+	if (val === "PM10" || val === "PM25") {
+		hexagonheatmap.data(hmhexaPM_aktuell);
+	} else if (val === "Official_AQI_US") {
+		hexagonheatmap.data(hmhexaPM_AQI);
+	} else if (val === "Temperature" || val === "Humidity" || val === "Pressure") {
+		hexagonheatmap.data(hmhexa_t_h_p.filter(function (value) {
+			return api.checkValues(value.data[user_selected_value], user_selected_value);
+		}));
+	}
+}
+
+function sensorNr(data) {
+	let inner_pre = "#";
+	if (user_selected_value !== "Official_AQI_US") {
+		inner_pre = "(+) #";
 	}
 
-	openedGraph1 = [];
+	openSidebar();
 
-	if(!d3.select("#results").empty()){
-		d3.select("#results").remove();
-	};
-
-	var x = document.getElementById("sidebar");
-	if (x.style.display = "none") {
-		x.style.display = "block";
-//		document.getElementById('menu').innerHTML='Close';
-	};
-
-	var textefin = "<table id='results' style='width:380px;'><tr><th class ='title'>"+translate.tr(lang,'Sensor')+"</th><th class = 'title'>"+translate.tr(lang,titles[selector1])+"</th></tr>";
+	let textefin = "<table id='results' style='width:380px;'><tr><th class ='title'>" + translate.tr(lang, 'Sensor') + "</th><th class = 'title'>" + translate.tr(lang, titles[user_selected_value]) + "</th></tr>";
 	if (data.length > 1) {
-		textefin += "<tr><td class='idsens'>Median "+data.length+" Sens.</td><td>"+parseInt(d3.median(data, (o) => o.o.data[selector1]))+"</td></tr>";
+		textefin += "<tr><td class='idsens'>Median " + data.length + " Sens.</td><td>" + parseInt(data_median(data)) + "</td></tr>";
 	}
-	var sensors = '';
-	data.forEach(function(i) {
-		sensors += "<tr><td class='idsens' value="+i.o.id+">"+inner_pre+i.o.id+"</td>";
-		if (selector1 == "PM10"){
-			sensors += "<td>"+i.o.data[selector1]+"</td></tr>";
-		};
-		if (selector1 == "PM25"){
-			sensors += "<td>"+i.o.data[selector1]+"</td></tr>";
-		};
-		if (selector1 == "Official_AQI_US"){
-			sensors += "<td>"+i.o.data[selector1]+" ("+i.o.data.origin+")</td></tr>";
-		};
-		if (selector1 == "Temperature"){
-			sensors += "<td>"+i.o.data[selector1]+"</td></tr>";
-		};
-		if (selector1 == "Humidity"){
-			sensors += "<td>"+i.o.data[selector1]+"</td></tr>";
-		};
-		if (selector1 == "Pressure"){
-			sensors += "<td>"+i.o.data[selector1].toFixed(1)+"</td></tr>";
-		};
-		sensors += "<tr id='graph_"+i.o.id+"'></tr>";
+	let sensors = '';
+	data.forEach(function (i) {
+		sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor? " (indoor)":"") +"</td>";
+		if (user_selected_value === "PM10") {
+			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+		}
+		if (user_selected_value === "PM25") {
+			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+		}
+		if (user_selected_value === "Official_AQI_US") {
+			sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td></tr>";
+		}
+		if (user_selected_value === "Temperature") {
+			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+		}
+		if (user_selected_value === "Humidity") {
+			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+		}
+		if (user_selected_value === "Pressure") {
+			sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
+		}
+		sensors += "<tr id='graph_" + i.o.id + "'></tr>";
 	});
 	textefin += sensors;
 
 	textefin += "</table>";
 
-	div.transition()
-		.duration(200)
-		.style("display", "block");
+	div.transition().duration(200).style("display", "block");
 
-	div.html(textefin)
-		.style("padding","10px")
+	div.html(textefin).style("padding", "10px");
 
-	d3.selectAll(".idsens").on("click", function() {
-		displayGraph(d3.select(this).attr("value"));
+	d3.selectAll(".idsens").on("click", function () {
+		displayGraph(d3.select(this).attr("id"));
 	});
+}
 
-};
+function displayGraph(id) {
 
-function aqius(val,type){
-
-	var index;
-
-	if (val >=0) {
-		if (type == 'PM10'){
-			if(parseInt(val)<= 54){index = formula(50,0,54,0,parseInt(val))}
-			else if(parseInt(val)<= 154){index = formula(100,51,154,55,parseInt(val))}
-			else if(parseInt(val)<= 254){index = formula(150,101,254,155,parseInt(val))}
-			else if(parseInt(val)<= 354){index = formula(200,151,354,255,parseInt(val))}
-			else if(parseInt(val)<= 424){index = formula(300,201,424,355,parseInt(val))}
-			else if(parseInt(val)<= 504){index = formula(400,301,504,425,parseInt(val))}
-			else if(parseInt(val)<= 604){index = formula(500,401,604,505,parseInt(val))}
-			else {index = 500};
-		};
-
-		if (type == 'PM25'){
-			if(val.toFixed(1)<= 12){index = formula(50,0,12,0,val.toFixed(1))}
-			else if(val.toFixed(1)<= 35.4){index = formula(100,51,35.4,12.1,val.toFixed(1))}
-			else if(val.toFixed(1)<= 55.4){index = formula(150,101,55.4,35.5,val.toFixed(1))}
-			else if(val.toFixed(1)<= 150.4){index = formula(200,151,150.4,55.5,val.toFixed(1))}
-			else if(val.toFixed(1)<= 250.4){index = formula(300,201,250.4,150.5,val.toFixed(1))}
-			else if(val.toFixed(1)<= 350.4){index = formula(400,301,350.4,250.5,val.toFixed(1))}
-			else if(val.toFixed(1)<= 550.4){index = formula(500,401,550.4,350.5,val.toFixed(1))}
-			else {index = 500};
-		};
-	}
-	return index;
-};
-
-function formula(Ih,Il,Ch,Cl,C){
-
-	var result = (((Ih-Il)/(Ch-Cl))*(C-Cl))+Il;
-
-	return parseInt(result);
-
-};
-
-function displayGraph(sens) {
-
-	var inner_pre = "";
+	let inner_pre = "";
+	const panel_str = "<iframe src='https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId=<PANELID>&var-node=<SENSOR>' width='290' height='200' frameborder='0'></iframe>";
+	const sens = id.substr(3);
 
 	if (!openedGraph1.includes(sens)) {
-
 		openedGraph1.push(sens);
 
-//		console_log(openedGraph1);
+		const iddiv = "#graph_" + sens;
 
-		var iddiv = "#graph_"+sens;
+		d3.select(iddiv).append("td")
+			.attr("id", "frame_" + sens)
+			.attr("colspan", "2")
+			.html(panel_str.replace("<PANELID>", panelIDs[user_selected_value][0]).replace("<SENSOR>", sens) + "<br>" + panel_str.replace("<PANELID>", panelIDs[user_selected_value][1]).replace("<SENSOR>", sens));
 
-		var td = d3.select(iddiv).append("td")
-				.attr("id", "frame_"+sens)
-				.attr("colspan", "2")
-				.html("<iframe src='https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId="+panelIDs[selector1][0]+"&var-node="+sens+"' width='290' height='200' frameborder='0'></iframe><br><iframe src='https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId="+panelIDs[selector1][1]+"&var-node="+sens+"' width='290' height='200' frameborder='0'></iframe>");
-
-		if (selector1 != "Official_AQI_US") {
-			inner_pre = "(-) ";
-		}
-		document.querySelectorAll("td.idsens[value='"+sens+"']")[0].innerHTML = inner_pre+"#"+sens;
+		if (user_selected_value !== "Official_AQI_US") inner_pre = "(-) ";
+		d3.select("#id_" + sens).html(inner_pre + "#" + sens);
 	} else {
-		if (selector1 != "Official_AQI_US") {
-			inner_pre = "(+) ";
-		}
-		document.querySelectorAll("td.idsens[value='"+sens+"']")[0].innerHTML = inner_pre+"#"+sens;
-		removeTd(sens);
-	};
-
-};
-
-function removeTd(id){
-	d3.select("#frame_"+id).remove();
-	removeInArray(openedGraph1,id);
-};
-
-function officialaqius(data){
-	var P1 = aqius(data.PM10,'PM10');
-	var P2 = aqius(data.PM25,'PM25');
-
-	if (P1>=P2){return {"AQI": P1, "origin": "PM10"}};
-	if (P1<P2){return {"AQI": P2, "origin": "PM2.5"}};
-};
+		if (user_selected_value !== "Official_AQI_US") inner_pre = "(+) ";
+		d3.select("#id_" + sens).html(inner_pre + "#" + sens);
+		d3.select("#frame_" + sens).remove();
+		removeInArray(openedGraph1, sens);
+	}
+}
 
 function removeInArray(array) {
-	var what, a = arguments, L = a.length, ax;
+	let what, a = arguments, L = a.length, ax;
 	while (L > 1 && array.length) {
 		what = a[--L];
-		while ((ax= array.indexOf(what)) !== -1) {
+		while ((ax = array.indexOf(what)) !== -1) {
 			array.splice(ax, 1);
 		}
 	}
-
-//	console_log(array);
-
 	return array;
 }
 
-//SELECT
-
-var x, i, j, selElmnt, a, b, c;
-/*look for any elements with the class "custom-select":*/
-x = document.getElementsByClassName("custom-select");
-for (i = 0; i < x.length; i++) {
-	selElmnt = x[i].getElementsByTagName("select")[0];
-	selector1 = selElmnt.value;
-	/*for each element, create a new DIV that will act as the selected item:*/
-	a = document.createElement("DIV");
-	a.setAttribute("class", "select-selected");
-	a.innerHTML = translate.tr(lang,selElmnt.options[selElmnt.selectedIndex].innerHTML);
-	x[i].appendChild(a);
-	/*for each element, create a new DIV that will contain the option list:*/
-	b = document.createElement("DIV");
-	b.setAttribute("class", "select-items select-hide");
-
-	for (j = 0; j < selElmnt.length; j++) {
-		if (selElmnt.options[j].value != selector1){
-
-			/*for each option in the original select element,
-			create a new DIV that will act as an option item:*/
-			c = document.createElement("DIV");
-			c.innerHTML = translate.tr(lang,selElmnt.options[j].innerHTML);
-			c.addEventListener("click", function(e) {
-				/*when an item is clicked, update the original select box,
-				and the selected item:*/
-				var y, i, k, s, h;
-				s = this.parentNode.parentNode.getElementsByTagName("select")[0];
-				h = this.parentNode.previousSibling;
-				for (i = 0; i < s.length; i++) {
-					if (s.options[i].innerHTML == this.innerHTML) {
-
-						reload(s.options[i].value);
-						s.selectedIndex = i;
-						h.innerHTML = this.innerHTML;
-
-//						console_log(h.value);
-//						console_log(this.innerHTML);
-//
-//						y = this.parentNode.getElementsByClassName("same-as-selected");
-//						for (k = 0; k < y.length; k++) {
-//							y[k].removeAttribute("class");
-//						}
-//						this.setAttribute("class", "same-as-selected");
-						break;
-					}
-				}
-				h.click();
+function showAllSelect() {
+	const custom_select = d3.select("#custom-select");
+	if (custom_select.select(".select-items").empty()) {
+		custom_select.append("div").attr("class", "select-items");
+		custom_select.select("select").selectAll("option").each(function () {
+			if (this.value !== user_selected_value) custom_select.select(".select-items").append("div").text(this.text).attr("id", "select-item-" + this.value).on("click", function () {
+				switchTo(this);
 			});
-			b.appendChild(c);
-		}
-	}
-
-	x[i].appendChild(b);
-	a.addEventListener("click", function(e) {
-		/*when the select box is clicked, close any other select boxes,
-		and open/close the current select box:*/
-		e.stopPropagation();
-		closeAllSelect(this);
-		this.nextSibling.classList.toggle("select-hide");
-		this.classList.toggle("select-arrow-active");
-	});
-}
-
-function closeAllSelect(elmnt) {
-	/*a function that will close all select boxes in the document,
-	except the current select box:*/
-	var x, y,z, i, arrNo = [],selElmnt;
-	x = document.getElementsByClassName("select-items");
-	y = document.getElementsByClassName("select-selected");
-	z = document.getElementsByClassName("same-as-selected");
-	selElmnt = document.getElementsByTagName("select")[0];
-	for (i = 0; i < y.length; i++) {
-		if (elmnt == y[i]) {
-			arrNo.push(i)
-			var element = x[0];
-			while (element.firstChild) {
-				element.removeChild(element.firstChild);
-			};
-
-			for (j = 0; j < selElmnt.length; j++) {
-
-				if (selElmnt.options[j].value != selector1){
-
-					/*for each option in the original select element,
-					create a new DIV that will act as an option item:*/
-					c = document.createElement("DIV");
-					c.innerHTML = selElmnt.options[j].innerHTML;
-					c.addEventListener("click", function(e) {
-						/*when an item is clicked, update the original select box,
-						and the selected item:*/
-						var y, i, k, s, h;
-						s = this.parentNode.parentNode.getElementsByTagName("select")[0];
-						h = this.parentNode.previousSibling;
-						for (i = 0; i < s.length; i++) {
-							if (s.options[i].innerHTML == this.innerHTML) {
-
-								reload(s.options[i].value);
-								s.selectedIndex = i;
-								h.innerHTML = this.innerHTML;
-//								y = this.parentNode.getElementsByClassName("same-as-selected");
-//								for (k = 0; k < y.length; k++) {
-//									y[k].removeAttribute("class");
-//								}
-//								this.setAttribute("class", "same-as-selected");
-								break;
-							}
-						}
-						h.click();
-					});
-					b.appendChild(c);
-				}
-			}
-		} else {
-			y[i].classList.remove("select-arrow-active");
-		}
-	}
-	for (i = 0; i < x.length; i++) {
-		if (arrNo.indexOf(i)) {
-			x[i].classList.add("select-hide");
-		}
+		});
+		custom_select.select(".select-selected").attr("class", "select-selected select-arrow-active");
 	}
 }
-/*if the user clicks anywhere outside the select box,
-then close all select boxes:*/
-document.addEventListener("click", closeAllSelect);
+
+function switchTo(element) {
+	const custom_select = d3.select("#custom-select");
+	custom_select.select("select").property("value", element.id.substring(12));
+	custom_select.select(".select-selected").text(custom_select.select("select").select("option:checked").text());
+	user_selected_value = element.id.substring(12);
+	reloadMap(user_selected_value);
+	custom_select.select(".select-items").remove();
+}

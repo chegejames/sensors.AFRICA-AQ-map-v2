@@ -1,7 +1,15 @@
+os:
+  - linux
+  - osx
+  - windows
+dist: xenial
 language: node_js
 node_js:
-- '6'
-script: npm run build
+  - node
+  - lts/*
+script:
+  - cp src/js/config.js.dist src/js/config.js
+  - npm run build
 after_success:
   - git config --global user.name "ricki-z"
   - git config --global user.email "ricki_z@gmx.de"
