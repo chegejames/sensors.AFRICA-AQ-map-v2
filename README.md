@@ -1,7 +1,7 @@
 # Sensors.AFRICA Map
 
 An implementation of sensors.africa map based of off the latest version of air quality map by Luftdaten.
-You can find a here a [Live Version](https://v2.map.aq.sensors.africa/).
+You can find a here a [Live Version](https://maps.luftdaten.info/).
 
 ## Goals and ideas
 
