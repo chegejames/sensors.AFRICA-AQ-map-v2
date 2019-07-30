@@ -1,7 +1,7 @@
 # Feinstaub Map
 
 A new version of air quality map for the Luftdaten.
-You can find a here a [Live Version](https://maps.luftdaten.info/).
+You can find a here a [Live Version](https://v2.map.aq.sensors.africa/).
 
 ## Goals and ideas
 
