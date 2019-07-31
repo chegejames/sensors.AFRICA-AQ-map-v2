@@ -131,12 +131,15 @@ let api = {
           let cells = _.chain(json)
             .filter(node => node.node_moved === false)
             .map(value => {
+              if (value.last_data_received_at > timestamp_data)
+                timestamp_data = value.last_data_received_at;
               const id = () => {
                 const stat = value.stats.find(
                   s => ["P1", "P2"].indexOf(s.value_type) !== -1
                 );
                 return stat ? Number(stat.sensor_id) : undefined;
               };
+              console.log(id());
               const lat = Number(value.location.latitude);
               const long = Number(value.location.longitude);
               const date = new Date(value.last_data_received_at);
@@ -148,8 +151,8 @@ let api = {
                 date: date.toLocaleDateString(),
                 id: id(),
                 data: {
-                  P1: P1 ? P1.average : 0,
-                  P2: P2 ? P2.average : 0
+                  PM10: P1 ? P1.average : 0,
+                  PM25: P2 ? P2.average : 0
                 }
               };
             })
