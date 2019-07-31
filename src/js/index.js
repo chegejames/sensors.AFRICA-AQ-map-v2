@@ -420,11 +420,6 @@ The values are refreshed every 5 minutes in order to fit with the measurement fr
 			hmhexaPM_aktuell = result.cells;
 			if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 			ready(1);
-			api.getData("", 2).then(function (result) {
-				hmhexaPM_AQI = result.cells;
-				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
-				ready(2);
-			});
 			
 		});
 	}

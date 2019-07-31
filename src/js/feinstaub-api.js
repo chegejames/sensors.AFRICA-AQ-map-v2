@@ -155,41 +155,6 @@ let api = {
             })
             .value();
           return Promise.resolve({ cells: cells, timestamp: timestamp_data });
-        } else if (num === 2) {
-          let cells = _.chain(json)
-            .filter(
-              node =>
-                typeof node.stats.value_type != "undefined" &&
-                node.stats.value_type
-            )
-            .map(values => {
-              if (values.last_data_received_at > timestamp_data)
-                timestamp_data = values.last_data_received_at;
-              const data_in = {
-                PM10: parseInt(getRightValue(values.stats, "P1")),
-                PM25: parseInt(getRightValue(values.stats, "P2"))
-              };
-              const data_out = api.officialAQIus(data_in);
-              return {
-                data: {
-                  Official_AQI_US: data_out.AQI,
-                  origin: data_out.origin,
-                  PM10_24h: data_in.PM10,
-                  PM25_24h: data_in.PM25
-                },
-                id: values.sensor.id,
-                latitude: values.location.latitude,
-                longitude: values.location.longitude
-              };
-            })
-            .filter(function(values) {
-              return api.checkValues(
-                values.data.Official_AQI_US,
-                "Official_AQI_US"
-              );
-            })
-            .value();
-          return Promise.resolve({ cells: cells, timestamp: timestamp_data });
         }
       })
       .catch(function(error) {
