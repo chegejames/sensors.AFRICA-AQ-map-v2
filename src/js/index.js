@@ -561,7 +561,7 @@ function sensorNr(data) {
 	}
 	let sensors = '';
 	data.forEach(function (i) {
-		if (i.o.id===undefined){
+		if (i.o.id === undefined && i.o.data[user_selected_value]=== 0){
 			return null
 		}else{
 			sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor ? " (indoor)" : "") + "</td>";
