@@ -419,6 +419,7 @@ The values are refreshed every 5 minutes in order to fit with the measurement fr
 		api.getData("http://api.sensors.africa/v2/nodes/?format=json", 1).then(function (result) {
 			hmhexaPM_aktuell = result.cells;
 			if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
+
 			ready(1);
 			
 		});
@@ -505,6 +506,7 @@ function toggleExplanation() {
 function ready(num) {
 	const dateParser = timeParse("%Y-%m-%d %H:%M:%S");
 	const timestamp = dateParser(timestamp_data);
+	console.log(timestamp);
 	const localTime = new Date();
 	const timeOffset = localTime.getTimezoneOffset();
 	const newTime = timeMinute.offset(timestamp, -(timeOffset));
@@ -570,7 +572,7 @@ function sensorNr(data) {
 			}
 			if (user_selected_value === "PM25") {
 				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-			}
+			}  	
 			if (user_selected_value === "Official_AQI_US") {
 				sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td></tr>";
 			}

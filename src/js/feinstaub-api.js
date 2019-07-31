@@ -133,6 +133,7 @@ let api = {
             .map(value => {
               if (value.last_data_received_at > timestamp_data)
                 timestamp_data = value.last_data_received_at;
+
               const id = () => {
                 const stat = value.stats.find(
                   s => ["P1", "P2"].indexOf(s.value_type) !== -1
