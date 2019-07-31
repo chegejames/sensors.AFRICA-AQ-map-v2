@@ -561,26 +561,31 @@ function sensorNr(data) {
 	}
 	let sensors = '';
 	data.forEach(function (i) {
-		sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor? " (indoor)":"") +"</td>";
-		if (user_selected_value === "PM10") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+		if (i.o.id===undefined){
+			return null
+		}else{
+			sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor ? " (indoor)" : "") + "</td>";
+			if (user_selected_value === "PM10") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+			}
+			if (user_selected_value === "PM25") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+			}
+			if (user_selected_value === "Official_AQI_US") {
+				sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td></tr>";
+			}
+			if (user_selected_value === "Temperature") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+			}
+			if (user_selected_value === "Humidity") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+			}
+			if (user_selected_value === "Pressure") {
+				sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
+			}
+			sensors += "<tr id='graph_" + i.o.id + "'></tr>";
 		}
-		if (user_selected_value === "PM25") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-		}
-		if (user_selected_value === "Official_AQI_US") {
-			sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td></tr>";
-		}
-		if (user_selected_value === "Temperature") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-		}
-		if (user_selected_value === "Humidity") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-		}
-		if (user_selected_value === "Pressure") {
-			sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
-		}
-		sensors += "<tr id='graph_" + i.o.id + "'></tr>";
+		
 	});
 	textefin += sensors;
 

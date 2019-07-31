@@ -139,7 +139,7 @@ let api = {
                 );
                 return stat ? Number(stat.sensor_id) : undefined;
               };
-              console.log(id());
+
               const lat = Number(value.location.latitude);
               const long = Number(value.location.longitude);
               const date = new Date(value.last_data_received_at);
@@ -151,8 +151,8 @@ let api = {
                 date: date.toLocaleDateString(),
                 id: id(),
                 data: {
-                  PM10: P1 ? P1.average : 0,
-                  PM25: P2 ? P2.average : 0
+                  PM10: P1 ? P1.average.toFixed(0) : 0,
+                  PM25: P2 ? P2.average.toFixed(0) : 0
                 }
               };
             })
