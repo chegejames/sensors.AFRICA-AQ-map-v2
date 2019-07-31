@@ -557,7 +557,7 @@ function sensorNr(data) {
 
 	let textefin = "<table id='results' style='width:380px;'><tr><th class ='title'>" + translate.tr(lang, 'Sensor') + "</th><th class = 'title'>" + translate.tr(lang, titles[user_selected_value]) + "</th></tr>";
 	if (data.length > 1) {
-		textefin += "<tr><td class='idsens'>Median " + data.length + " Sens.</td><td>" + parseInt(data_median(data)) + "</td></tr>";
+		textefin += "<tr><td class='idsens'>Median " + (data.length-1) + " Sens.</td><td>" + parseInt(data_median(data)) + "</td></tr>";
 	}
 	let sensors = '';
 	data.forEach(function (i) {
