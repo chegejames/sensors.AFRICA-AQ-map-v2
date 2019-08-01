@@ -133,7 +133,6 @@ let api = {
             .map(value => {
               if (value.last_data_received_at > timestamp_data)
                 timestamp_data = value.last_data_received_at;
-
               const id = () => {
                 const stat = value.stats.find(
                   s => ["P1", "P2"].indexOf(s.value_type) !== -1
@@ -143,13 +142,13 @@ let api = {
 
               const lat = Number(value.location.latitude);
               const long = Number(value.location.longitude);
-              const date = new Date(value.last_data_received_at);
+              //const date = new Date(value.last_data_received_at);
               const P1 = value.stats.find(s => s.value_type === "P1");
               const P2 = value.stats.find(s => s.value_type === "P2");
               return {
                 latitude: lat,
                 longitude: long,
-                date: date.toLocaleDateString(),
+                //date: date.toLocaleDateString(),
                 id: id(),
                 data: {
                   PM10: P1 ? P1.average.toFixed(0) : 0,
