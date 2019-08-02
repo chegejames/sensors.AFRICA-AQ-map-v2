@@ -142,12 +142,14 @@ let api = {
               };
               const lat = Number(value.location.latitude);
               const long = Number(value.location.longitude);
+              const date = new Date(value.last_data_received_at);
               const P1 = value.stats.find(s => s.value_type === "P1");
               const P2 = value.stats.find(s => s.value_type === "P2");
               return {
                 latitude: lat,
                 longitude: long,
                 id: id(),
+                date: date.toLocaleDateString(),
                 data: {
                   PM10: P1 ? P1.average.toFixed(0) : 0,
                   PM25: P2 ? P2.average.toFixed(0) : 0
