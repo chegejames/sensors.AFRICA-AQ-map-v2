@@ -416,7 +416,7 @@ The values are refreshed every 5 minutes in order to fit with the measurement fr
 
 //	REVOIR ORDRE DANS FONCTION READY
 	function retrieveData() {
-		api.getData("http://api.sensors.africa/v2/nodes/?format=json", 1).then(function (result) {
+		api.getData("https://api.sensors.africa/v2/nodes/?format=json", 1).then(function (result) {
 			hmhexaPM_aktuell = result.cells;
 			if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 			ready(1);
