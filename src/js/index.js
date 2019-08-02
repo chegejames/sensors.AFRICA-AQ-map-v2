@@ -502,14 +502,19 @@ function toggleExplanation() {
 }
 
 function ready(num) {
-	const dateParser = timeParse("%Y-%m-%d %H:%M:%S");
-	const timestamp = dateParser(timestamp_data);
-	const localTime = new Date();
-	const timeOffset = localTime.getTimezoneOffset();
-	const newTime = timeMinute.offset(timestamp, -(timeOffset));
-	const dateFormater = locale.format("%H:%M:%S");
+	//const dateParser = timeParse("%Y-%m-%d %H:%M:%S");
+	//const timestamp = dateParser(timestamp_data);
+	///const localTime = new Date();
+	//const timeOffset = localTime.getTimezoneOffset();
+	//const newTime = timeMinute.offset(timestamp, -(timeOffset));
+	//const dateFormater = locale.format("%H:%M:%S");
+	function getTime(){
+		let isoDate = timestamp_data;
+		let result = isoDate.match(/\d\d:\d\d/);
+		return result[0]
+	}
 
-	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + dateFormater(newTime));
+	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + getTime());
 
 	if (num === 1 && (user_selected_value === "PM10" || user_selected_value === "PM25")) {
 		hexagonheatmap.initialize(scale_options[user_selected_value]);
