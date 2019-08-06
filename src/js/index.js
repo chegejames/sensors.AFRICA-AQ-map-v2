@@ -141,7 +141,7 @@ if (location.hash) {
 	const hostname_parts = location.hostname.split(".");
 	if (hostname_parts.length === 4) {
 		const place = hostname_parts[0].toLowerCase();
-		console.log(place);
+		//console.log(place);
 		if (typeof places[place] !== 'undefined' && places[place] !== null) {
 			coordsCenter = places[place];
 			zoomLevel = 11;
@@ -192,7 +192,7 @@ window.onload = function () {
 
 		// Make hex radius dynamic for different zoom levels to give a nicer overview of the sensors as well as making sure that the hex grid does not cover the whole world when zooming out
 		getFlexRadius() {
-			console.log(user_selected_value);
+			//console.log(user_selected_value);
 //			if (user_selected_value != "Noise") {
 				if (this.map.getZoom() < 3) {
 					return this.options.radius / (3 * (4 - this.map.getZoom()));
@@ -431,17 +431,17 @@ The values are refreshed every 5 minutes in order to fit with the measurement fr
 			hmhexaPM_aktuell = result.cells;
 			if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 			ready(1);
-			//api.getData("https://api.sensors.africa/v2/nodes/?format=json", 2).then(function (result) {
-				//hmhexaPM_AQI = result.cells;
-				//if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
-				//ready(2);
-			//});
-			{/*api.getData("https://maps.luftdaten.info/data/v2/data.temp.min.json", 3).then(function (result) {
+			{/*api.getData("https://api.sensors.africa/v2/nodes/?format=json", 2).then(function (result) {
+				hmhexaPM_AQI = result.cells;
+				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
+				ready(2);
+			});
+			api.getData("https://api.sensors.africa/v2/nodes/?format=json", 3).then(function (result) {
 				hmhexa_t_h_p = result.cells;
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(3);
 			});
-			api.getData("https://maps.luftdaten.info/data/v1/data.noise.json", 4).then(function (result) {
+		}	api.getData("https://api.sensors.africa/v2/nodes/?format=json", 4).then(function (result) {
 				hmhexa_noise = result.cells;
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(4);
@@ -674,7 +674,7 @@ function showAllSelect() {
 	if (custom_select.select(".select-items").empty()) {
 		custom_select.append("div").attr("class", "select-items");
 		custom_select.select("select").selectAll("option").each(function (d) {
-			console.log(d3.select(this).html());
+			//console.log(d3.select(this).html());
 			if (this.value !== user_selected_value) custom_select.select(".select-items").append("div").html("<span>"+d3.select(this).html()+"</span>").attr("id", "select-item-" + this.value).on("click", function () {
 				switchTo(this);
 			});
