@@ -1,7 +1,7 @@
 {
-  "name": "luft_node",
+  "name": "sensors.africa.feinstaub-map-v2",
   "version": "1.0.0",
-  "description": "A new map for the Project Luftdaten",
+  "description": "A new map for the Project Luftdaten - Implemented on sensors.AFRICA Map",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -11,14 +11,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/pjgueno/luft_node.git"
+    "url": "git+https://github.com/CodeForAfrica/sensors.africa.feinstaub-map-v2.git"
   },
   "author": "PJ",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/pjgueno/luft_node/issues"
+    "url": "https://github.com/CodeForAfrica/sensors.africa.feinstaub-map-v2/issues"
   },
-  "homepage": "https://github.com/pjgueno/luft_node#readme",
+  "homepage": "https://v2.map.aq.sensors.africa",
   "devDependencies": {
     "css-loader": "^2.1.1",
     "file-loader": "^3.0.1",
