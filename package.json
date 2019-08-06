@@ -11,12 +11,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CodeForAfrica/sensors.africa.feinstaub-map-v2.git"
+    "url": "git+https://github.com/CodeForAfrica/sensors.AFRICA-AQ-map-v2.git"
   },
   "author": "PJ",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/CodeForAfrica/sensors.africa.feinstaub-map-v2/issues"
+    "url": "https://github.com/CodeForAfrica/sensors.AFRICA-AQ-map-v2.git/issues"
   },
   "homepage": "https://v2.map.aq.sensors.africa",
   "devDependencies": {
