@@ -589,30 +589,35 @@ function sensorNr(data) {
 
 	openSidebar();
 
-	let textefin = "<table id='results' style='width:380px;'><tr><th class ='title'>" + translate.tr(lang, 'Sensor') + "</th><th class = 'title'>" + translate.tr(lang, titles[user_selected_value]) + "</th></tr>";
+	let textefin = "<table id='results' style='width:380px;'><tr><th class ='title'>" + translate.tr(lang, 'Sensor') + "</th><th class = 'title'>" + translate.tr(lang, titles[user_selected_value]) + "</th><th>Last date update</th></tr>";
 	if (data.length > 1) {
-		textefin += "<tr><td class='idsens'>Median " + data.length + " Sens.</td><td>" + parseInt(data_median(data)) + "</td></tr>";
+		textefin += "<tr><td class='idsens'>Median " + data.length + " Sens.</td><td>" + parseInt(data_median(data)) + "</td><td></td></tr>";
 	}
 	let sensors = '';
 	data.forEach(function (i) {
-		if (i.o.id === undefined && i.o.data[user_selected_value]=== 0){
+		if (i.o.id === undefined && i.o.data[user_selected_value] === 0){
 			return null
 		} else {
 			sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor? " (indoor)":"") +"</td>";
 			if (user_selected_value === "PM10") {
-				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
 			if (user_selected_value === "PM25") {
-				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
 			if (user_selected_value === "Official_AQI_US") {
-				sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td></tr>";
+				sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
 			if (user_selected_value === "Temperature") {
-				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
 			if (user_selected_value === "Humidity") {
-				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
 			if (user_selected_value === "Pressure") {
 				sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
