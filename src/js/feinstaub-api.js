@@ -122,7 +122,7 @@ let api = {
 			let value;
 			array.forEach(function (item) {
 				if (item.value_type === type) {
-					value = item.value;
+					value = item.value_type;
 				}
 			});
 			return value;
@@ -131,6 +131,7 @@ let api = {
 		return fetch(URL)
 			.then((resp) => resp.json())
 			.then((json) => {
+				console.log(json)
 				console.log('successful retrieved data');
 				let timestamp_data = '';
 				if (num === 1) {
@@ -161,6 +162,44 @@ let api = {
 	                  PM25: P2 ? P2.average.toFixed(0) : 0
 	                }
 	              };
+						})
+						.value();
+					return Promise.resolve({cells: cells, timestamp: timestamp_data});
+				} else if (num === 2) {
+					let cells = _.chain(json)
+						.filter(node => node.node_moved === false)
+						.map((values) => {
+							if (values.last_data_received_at > timestamp_data) timestamp_data = values.last_data_received_at;
+							const id = () => {
+                const stat = values.stats.find(
+                  s => ["P1", "P2"].indexOf(s.value_type) !== -1
+                );
+                return stat ? Number(stat.sensor_id) : undefined;
+              };
+							const P1 = values.stats.find(s => s.value_type === "P1");
+							const P2 = values.stats.find(s => s.value_type === "P2");
+							const data_in = {
+								"PM10": P1 ? P1.average : 0,
+								"PM25": P2 ? P2.average: 0
+							};
+							const data_out = api.officialAQIus(data_in);
+							console.log(data_out)
+
+							return {
+								"data": {
+									"Official_AQI_US": data_out.AQI,
+									"origin": data_out.origin,
+									"PM10_24h": data_in.PM10,
+									"PM25_24h": data_in.PM25
+								},
+								"id": id(),
+								"latitude": values.location.latitude,
+								"longitude": values.location.longitude,
+								"indoor": values.location.indoor,
+							}
+						})
+						.filter(function (values) {
+							return (api.checkValues(values.data.Official_AQI_US, "Official_AQI_US"));
 						})
 						.value();
 					return Promise.resolve({cells: cells, timestamp: timestamp_data});
