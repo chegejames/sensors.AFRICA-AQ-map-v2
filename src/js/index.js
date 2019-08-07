@@ -436,12 +436,12 @@ The values are refreshed every 5 minutes in order to fit with the measurement fr
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(2);
 			});
-			{/*api.getData("https://api.sensors.africa/v2/nodes/?format=json", 3).then(function (result) {
+			api.getData("https://api.sensors.africa/v2/nodes/?format=json", 3).then(function (result) {
 				hmhexa_t_h_p = result.cells;
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(3);
 			});
-		}	api.getData("https://api.sensors.africa/v2/nodes/?format=json", 4).then(function (result) {
+		{/*api.getData("https://api.sensors.africa/v2/nodes/?format=json", 4).then(function (result) {
 				hmhexa_noise = result.cells;
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(4);

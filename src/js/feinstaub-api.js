@@ -131,7 +131,6 @@ let api = {
 		return fetch(URL)
 			.then((resp) => resp.json())
 			.then((json) => {
-				console.log(json)
 				console.log('successful retrieved data');
 				let timestamp_data = '';
 				if (num === 1) {
@@ -140,7 +139,6 @@ let api = {
 						.map((value) => {
 							if (value.last_data_received_at > timestamp_data)
 	                timestamp_data = value.last_data_received_at;
-
 	              const id = () => {
 	                const stat = value.stats.find(
 	                  s => ["P1", "P2"].indexOf(s.value_type) !== -1
@@ -153,13 +151,13 @@ let api = {
 	              const P1 = value.stats.find(s => s.value_type === "P1");
 	              const P2 = value.stats.find(s => s.value_type === "P2");
 								return {
-	                latitude: lat,
-	                longitude: long,
-	                id: id(),
-	                date: date.toLocaleDateString(),
-	                data: {
-	                  PM10: P1 ? P1.average.toFixed(0) : 0,
-	                  PM25: P2 ? P2.average.toFixed(0) : 0
+	                "latitude": lat,
+	                "longitude": long,
+	                "id":id(),
+	                "date": date.toLocaleDateString(),
+	                "data": {
+	                  "PM10": P1 ? P1.average.toFixed(0) : 0,
+	                  "PM25": P2 ? P2.average.toFixed(0) : 0
 	                }
 	              };
 						})
@@ -183,7 +181,6 @@ let api = {
 								"PM25": P2 ? P2.average: 0
 							};
 							const data_out = api.officialAQIus(data_in);
-							console.log(data_out)
 
 							return {
 								"data": {
@@ -195,7 +192,6 @@ let api = {
 								"id": id(),
 								"latitude": values.location.latitude,
 								"longitude": values.location.longitude,
-								"indoor": values.location.indoor,
 							}
 						})
 						.filter(function (values) {
@@ -203,7 +199,57 @@ let api = {
 						})
 						.value();
 					return Promise.resolve({cells: cells, timestamp: timestamp_data});
-				}
+				} else if (num === 3) {
+				 let cells = _.chain(json)
+					 .filter(node =>node.node_moved === false)
+					 .map((values) => {
+						 if (values.last_data_received_at > timestamp_data) timestamp_data = values.last_data_received_at;
+						 const id = () => {
+							 const stat = values.stats.find(
+								 s => ["humidity", "temperature"].indexOf(s.value_type) !== -1
+							 );
+							 return stat ? Number(stat.sensor_id) : undefined;
+						 };
+						 const lat = Number(values.location.latitude);
+						 const long = Number(values.location.longitude);
+						 const date = new Date(values.last_data_received_at);
+						 const humidity = values.stats.find(s => s.value_type === "humidity");
+						 const temperature = values.stats.find(s => s.value_type === "temperature");
+						 return {
+							 "latitude": lat,
+							 "longitude": long,
+							 "id": id(),
+							 "date": date.toLocaleDateString(),
+							 "data": {
+								 "Humidity": humidity ? humidity.average.toFixed(0) : 0,
+								 "Temperature": temperature ? temperature.average.toFixed(0) : 0
+							 }
+						 };
+					 })
+					 .value();
+				 return Promise.resolve({cells: cells, timestamp: timestamp_data});
+			 }
+			 {/*else if (num === 4) {
+					let cells = _.chain(json)
+						.filter((sensor) =>
+							typeof api.noise_sensors[sensor.sensor.sensor_type.name] != "undefined"
+							&& api.noise_sensors[sensor.sensor.sensor_type.name]
+						)
+						.map((values) => {
+							if (values.timestamp > timestamp_data) timestamp_data = values.timestamp;
+							return {
+								"data": {
+									"Noise": parseInt(getRightValue(values.sensordatavalues, "noise_LAeq")),
+								},
+								"id": values.sensor.id,
+								"latitude": values.location.latitude,
+								"longitude": values.location.longitude,
+								"indoor": values.location.indoor,
+							}
+						})
+						.value();
+					return Promise.resolve({cells: cells, timestamp: timestamp_data});
+				}*/}
 			}).catch(function (error) {
 				// If there is any error you will catch them here
 				throw new Error(`Problems fetching data ${error}`)
