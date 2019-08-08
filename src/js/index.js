@@ -539,7 +539,8 @@ function ready(num) {
 	const dateFormater = locale.format("%H:%M:%S");
 
 
-	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + dateFor
+	d3.select("#update").html(translate.tr(lang, "Last update") + ": "  + dateFormater(newTime));
+
 	if (num === 1 && (user_selected_value === "PM10" || user_selected_value === "PM25")) {
 		hexagonheatmap.initialize(scale_options[user_selected_value]);
 		hexagonheatmap.data(hmhexaPM_aktuell);
@@ -613,7 +614,10 @@ function sensorNr(data) {
 				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
 				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
-			if (user_selected_value === "Humidity			}
+			if (user_selected_value === "Humidity") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
+			}
 			if (user_selected_value === "Pressure") {
 				sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
 			}
@@ -621,7 +625,6 @@ function sensorNr(data) {
 				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
 			}
 			sensors += "<tr id='graph_" + i.o.id + "'></tr>";
-		}
 	});
 	textefin += sensors;
 
