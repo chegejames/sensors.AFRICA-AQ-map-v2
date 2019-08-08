@@ -141,7 +141,7 @@ if (location.hash) {
 	const hostname_parts = location.hostname.split(".");
 	if (hostname_parts.length === 4) {
 		const place = hostname_parts[0].toLowerCase();
-		//console.log(place);
+		console.log(place);
 		if (typeof places[place] !== 'undefined' && places[place] !== null) {
 			coordsCenter = places[place];
 			zoomLevel = 11;
@@ -192,7 +192,7 @@ window.onload = function () {
 
 		// Make hex radius dynamic for different zoom levels to give a nicer overview of the sensors as well as making sure that the hex grid does not cover the whole world when zooming out
 		getFlexRadius() {
-			//console.log(user_selected_value);
+			console.log(user_selected_value);
 //			if (user_selected_value != "Noise") {
 				if (this.map.getZoom() < 3) {
 					return this.options.radius / (3 * (4 - this.map.getZoom()));
@@ -531,12 +531,14 @@ function toggleExplanation() {
 }
 
 function ready(num) {
-	const dateParser = timeParse("%Y-%m-%d %H:%M:%S");
+	//console.log(timestamp_data)
+	const dateParser = timeParse("%Y-%m-%dT%H:%M:%S.%fZ") || timeParse("%Y-%m-%d %H:%M:%S");
 	const timestamp = dateParser(timestamp_data);
 	const localTime = new Date();
 	const timeOffset = localTime.getTimezoneOffset();
 	const newTime = timeMinute.offset(timestamp, -(timeOffset));
 	const dateFormater = locale.format("%H:%M:%S");
+
 
 	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + dateFormater(newTime));
 
@@ -683,7 +685,7 @@ function showAllSelect() {
 	if (custom_select.select(".select-items").empty()) {
 		custom_select.append("div").attr("class", "select-items");
 		custom_select.select("select").selectAll("option").each(function (d) {
-			//console.log(d3.select(this).html());
+			console.log(d3.select(this).html());
 			if (this.value !== user_selected_value) custom_select.select(".select-items").append("div").html("<span>"+d3.select(this).html()+"</span>").attr("id", "select-item-" + this.value).on("click", function () {
 				switchTo(this);
 			});

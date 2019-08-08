@@ -214,7 +214,6 @@ let api = {
 							 );
 							 return stat ? Number(stat.sensor_id) : undefined;
 						 };
-						 console.log(id())
 						 const lat = Number(values.location.latitude);
 						 const long = Number(values.location.longitude);
 						 const date = new Date(values.last_data_received_at);
