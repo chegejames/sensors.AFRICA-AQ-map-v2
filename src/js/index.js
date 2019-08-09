@@ -531,6 +531,7 @@ function toggleExplanation() {
 }
 
 function ready(num) {
+	//console.log(timestamp_data)
 	const dateParser = timeParse("%Y-%m-%dT%H:%M:%S.%fZ") || timeParse("%Y-%m-%d %H:%M:%S");
 	const timestamp = dateParser(timestamp_data);
 	const localTime = new Date();
@@ -539,7 +540,8 @@ function ready(num) {
 	const dateFormater = locale.format("%H:%M:%S");
 
 
-	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + dateFor
+	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + dateFormater(newTime));
+
 	if (num === 1 && (user_selected_value === "PM10" || user_selected_value === "PM25")) {
 		hexagonheatmap.initialize(scale_options[user_selected_value]);
 		hexagonheatmap.data(hmhexaPM_aktuell);
@@ -597,7 +599,9 @@ function sensorNr(data) {
 	data.forEach(function (i) {
 		if (i.o.id === undefined && i.o.data[user_selected_value] === 0){
 			return null
-		}			if (user_selected_value === "PM10") {
+		} else {
+			sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor? " (indoor)":"") +"</td>";
+			if (user_selected_value === "PM10") {
 				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
 				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
@@ -613,7 +617,10 @@ function sensorNr(data) {
 				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
 				sensors += "<td>" + i.o.date + "</td></tr>";
 			}
-			if (user_selected_value === "Humidity			}
+			if (user_selected_value === "Humidity") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
+			}
 			if (user_selected_value === "Pressure") {
 				sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
 			}
