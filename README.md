@@ -1,5 +1,5 @@
-# Feinstaub Map
-A new version of air quality map for the Luftdaten. 
+# sensors.AFRICA-AQ-map-v2
+A new version of air quality map for the Luftdaten.
 You can find a here a [Live Version](https://maps.luftdaten.info/).
 
 ## Goals and ideas

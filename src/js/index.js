@@ -427,25 +427,25 @@ The values are refreshed every 5 minutes in order to fit with the measurement fr
 
 //	REVOIR ORDRE DANS FONCTION READY
 	function retrieveData() {
-		api.getData("https://maps.luftdaten.info/data/v2/data.dust.min.json", 1).then(function (result) {
+		api.getData("https://api.sensors.africa/v2/nodes/?format=json", 1).then(function (result) {
 			hmhexaPM_aktuell = result.cells;
 			if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 			ready(1);
-			api.getData("https://maps.luftdaten.info/data/v2/data.24h.json", 2).then(function (result) {
+			api.getData("https://api.sensors.africa/v2/nodes/?format=json", 2).then(function (result) {
 				hmhexaPM_AQI = result.cells;
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(2);
 			});
-			api.getData("https://maps.luftdaten.info/data/v2/data.temp.min.json", 3).then(function (result) {
+			api.getData("https://api.sensors.africa/v2/nodes/?format=json", 3).then(function (result) {
 				hmhexa_t_h_p = result.cells;
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(3);
 			});
-			api.getData("https://maps.luftdaten.info/data/v1/data.noise.json", 4).then(function (result) {
+		{/*api.getData("https://api.sensors.africa/v2/nodes/?format=json", 4).then(function (result) {
 				hmhexa_noise = result.cells;
 				if (result.timestamp > timestamp_data) timestamp_data = result.timestamp;
 				ready(4);
-			});
+			});*/}
 		});
 	}
 
@@ -531,12 +531,14 @@ function toggleExplanation() {
 }
 
 function ready(num) {
-	const dateParser = timeParse("%Y-%m-%d %H:%M:%S");
+	//console.log(timestamp_data)
+	const dateParser = timeParse("%Y-%m-%dT%H:%M:%S.%fZ") || timeParse("%Y-%m-%d %H:%M:%S");
 	const timestamp = dateParser(timestamp_data);
 	const localTime = new Date();
 	const timeOffset = localTime.getTimezoneOffset();
 	const newTime = timeMinute.offset(timestamp, -(timeOffset));
 	const dateFormater = locale.format("%H:%M:%S");
+
 
 	d3.select("#update").html(translate.tr(lang, "Last update") + ": " + dateFormater(newTime));
 
@@ -589,35 +591,44 @@ function sensorNr(data) {
 
 	openSidebar();
 
-	let textefin = "<table id='results' style='width:380px;'><tr><th class ='title'>" + translate.tr(lang, 'Sensor') + "</th><th class = 'title'>" + translate.tr(lang, titles[user_selected_value]) + "</th></tr>";
+	let textefin = "<table id='results' style='width:380px;'><tr><th class ='title'>" + translate.tr(lang, 'Sensor') + "</th><th class = 'title'>" + translate.tr(lang, titles[user_selected_value]) + "</th><th>Last date update</th></tr>";
 	if (data.length > 1) {
-		textefin += "<tr><td class='idsens'>Median " + data.length + " Sens.</td><td>" + parseInt(data_median(data)) + "</td></tr>";
+		textefin += "<tr><td class='idsens'>Median " + data.length + " Sens.</td><td>" + parseInt(data_median(data)) + "</td><td></td></tr>";
 	}
 	let sensors = '';
 	data.forEach(function (i) {
-		sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor? " (indoor)":"") +"</td>";
-		if (user_selected_value === "PM10") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+		if (i.o.id === undefined && i.o.data[user_selected_value] === 0){
+			return null
+		} else {
+			sensors += "<tr><td class='idsens' id='id_" + i.o.id + "'>" + inner_pre + i.o.id + (i.o.indoor? " (indoor)":"") +"</td>";
+			if (user_selected_value === "PM10") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
+			}
+			if (user_selected_value === "PM25") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
+			}
+			if (user_selected_value === "Official_AQI_US") {
+				sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
+			}
+			if (user_selected_value === "Temperature") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
+			}
+			if (user_selected_value === "Humidity") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td>"
+				sensors += "<td>" + i.o.date + "</td></tr>";
+			}
+			if (user_selected_value === "Pressure") {
+				sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
+			}
+			if (user_selected_value === "Noise") {
+				sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
+			}
+			sensors += "<tr id='graph_" + i.o.id + "'></tr>";
 		}
-		if (user_selected_value === "PM25") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-		}
-		if (user_selected_value === "Official_AQI_US") {
-			sensors += "<td>" + i.o.data[user_selected_value] + " (" + i.o.data.origin + ")</td></tr>";
-		}
-		if (user_selected_value === "Temperature") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-		}
-		if (user_selected_value === "Humidity") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-		}
-		if (user_selected_value === "Pressure") {
-			sensors += "<td>" + i.o.data[user_selected_value].toFixed(1) + "</td></tr>";
-		}
-		if (user_selected_value === "Noise") {
-			sensors += "<td>" + i.o.data[user_selected_value] + "</td></tr>";
-		}
-		sensors += "<tr id='graph_" + i.o.id + "'></tr>";
 	});
 	textefin += sensors;
 

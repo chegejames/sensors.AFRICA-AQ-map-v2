@@ -29,7 +29,7 @@ let api = {
 		"SHT31": true,
 		"SHT35": true,
 	},
-	
+
 	noise_sensors: {
 		"Laerm": true,
 	},
@@ -122,7 +122,7 @@ let api = {
 			let value;
 			array.forEach(function (item) {
 				if (item.value_type === type) {
-					value = item.value;
+					value = item.value_type;
 				}
 			});
 			return value;
@@ -135,40 +135,55 @@ let api = {
 				let timestamp_data = '';
 				if (num === 1) {
 					let cells = _.chain(json)
-						.filter((sensor) =>
-							typeof api.pm_sensors[sensor.sensor.sensor_type.name] != "undefined"
-							&& api.pm_sensors[sensor.sensor.sensor_type.name]
-							&& api.checkValues(parseInt(getRightValue(sensor.sensordatavalues, "P1")), "PM10")
-							&& api.checkValues(parseInt(getRightValue(sensor.sensordatavalues, "P2")), "PM25")
-						)
+					.filter(node => node.node_moved === false)
 						.map((values) => {
-							if (values.timestamp > timestamp_data) timestamp_data = values.timestamp;
-							return {
-								data: {
-									PM10: parseInt(getRightValue(values.sensordatavalues, "P1")),
-									PM25: parseInt(getRightValue(values.sensordatavalues, "P2"))
-								},
-								id: values.sensor.id,
-								latitude: Number(values.location.latitude),
-								longitude: Number(values.location.longitude),
-								"indoor": values.location.indoor,
-							}
+							if (values.last_data_received_at > timestamp_data)
+	                timestamp_data = values.last_data_received_at;
+	              const id = () => {
+	                const stat = values.stats.find(
+	                  s => ["P1", "P2"].indexOf(s.value_type) !== -1
+	                );
+	                return stat ? Number(stat.sensor_id) : undefined;
+	              };
+	              const lat = Number(values.location.latitude);
+	              const long = Number(values.location.longitude);
+	              const date = new Date(values.last_data_received_at);
+	              const P1 = values.stats.find(s => s.value_type === "P1");
+	              const P2 = values.stats.find(s => s.value_type === "P2");
+								return {
+	                "latitude": lat,
+	                "longitude": long,
+	                "id":id(),
+	                "date": date.toLocaleDateString(),
+	                "data": {
+	                  "PM10": P1 ? P1.average.toFixed(0) : 0,
+	                  "PM25": P2 ? P2.average.toFixed(0) : 0
+	                },
+									"indoor": values.location.indoor,
+	              };
 						})
 						.value();
 					return Promise.resolve({cells: cells, timestamp: timestamp_data});
 				} else if (num === 2) {
 					let cells = _.chain(json)
-						.filter((sensor) =>
-							typeof api.pm_sensors[sensor.sensor.sensor_type.name] != "undefined"
-							&& api.pm_sensors[sensor.sensor.sensor_type.name]
-						)
+						.filter(node => node.node_moved === false)
 						.map((values) => {
-							if (values.timestamp > timestamp_data) timestamp_data = values.timestamp;
+							if (values.last_data_received_at > timestamp_data) timestamp_data = values.last_data_received_at;
+							const id = () => {
+                const stat = values.stats.find(
+                  s => ["P1", "P2"].indexOf(s.value_type) !== -1
+                );
+                return stat ? Number(stat.sensor_id) : undefined;
+              };
+							const date = new Date(values.last_data_received_at);
+							const P1 = values.stats.find(s => s.value_type === "P1");
+							const P2 = values.stats.find(s => s.value_type === "P2");
 							const data_in = {
-								"PM10": parseInt(getRightValue(values.sensordatavalues, "P1")),
-								"PM25": parseInt(getRightValue(values.sensordatavalues, "P2"))
+								"PM10": P1 ? P1.average : 0,
+								"PM25": P2 ? P2.average : 0
 							};
 							const data_out = api.officialAQIus(data_in);
+
 							return {
 								"data": {
 									"Official_AQI_US": data_out.AQI,
@@ -176,7 +191,8 @@ let api = {
 									"PM10_24h": data_in.PM10,
 									"PM25_24h": data_in.PM25
 								},
-								"id": values.sensor.id,
+								"id": id(),
+								"date": date.toLocaleDateString(),
 								"latitude": values.location.latitude,
 								"longitude": values.location.longitude,
 								"indoor": values.location.indoor,
@@ -188,28 +204,37 @@ let api = {
 						.value();
 					return Promise.resolve({cells: cells, timestamp: timestamp_data});
 				} else if (num === 3) {
-					let cells = _.chain(json)
-						.filter((sensor) =>
-							typeof api.thp_sensors[sensor.sensor.sensor_type.name] != "undefined"
-							&& api.thp_sensors[sensor.sensor.sensor_type.name]
-						)
-						.map((values) => {
-							if (values.timestamp > timestamp_data) timestamp_data = values.timestamp;
-							return {
-								"data": {
-									"Pressure": parseInt(getRightValue(values.sensordatavalues, "pressure_at_sealevel")) / 100,
-									"Humidity": parseInt(getRightValue(values.sensordatavalues, "humidity")),
-									"Temperature": parseInt(getRightValue(values.sensordatavalues, "temperature"))
-								},
-								"id": values.sensor.id,
-								"latitude": values.location.latitude,
-								"longitude": values.location.longitude,
-								"indoor": values.location.indoor,
-							}
-						})
-						.value();
-					return Promise.resolve({cells: cells, timestamp: timestamp_data});
-				} else if (num === 4) {
+				 let cells = _.chain(json)
+					 .filter(node => node.node_moved === false)
+					 .map((values) => {
+						 if (values.last_data_received_at > timestamp_data) timestamp_data = values.last_data_received_at;
+						 const id = () => {
+							 const stat = values.stats.find(
+								 s => ["humidity", "temperature"].indexOf(s.value_type) !== -1
+							 );
+							 return stat ? Number(stat.sensor_id) : undefined;
+						 };
+						 const lat = Number(values.location.latitude);
+						 const long = Number(values.location.longitude);
+						 const date = new Date(values.last_data_received_at);
+						 const humidity = values.stats.find(s => s.value_type === "humidity");
+						 const temperature = values.stats.find(s => s.value_type === "temperature");
+						 return {
+							 "latitude": lat,
+							 "longitude": long,
+							 "id": id(),
+							 "date": date.toLocaleDateString(),
+							 "data": {
+								 "Humidity": humidity ? Math.round(humidity.average)  : 0,
+								 "Temperature": temperature ? Math.round(temperature.average) : 0
+							 },
+							 "indoor": values.location.indoor,
+						 };
+					 })
+					 .value();
+				 return Promise.resolve({cells: cells, timestamp: timestamp_data});
+			 }
+			 {/*else if (num === 4) {
 					let cells = _.chain(json)
 						.filter((sensor) =>
 							typeof api.noise_sensors[sensor.sensor.sensor_type.name] != "undefined"
@@ -229,7 +254,7 @@ let api = {
 						})
 						.value();
 					return Promise.resolve({cells: cells, timestamp: timestamp_data});
-				}
+				}*/}
 			}).catch(function (error) {
 				// If there is any error you will catch them here
 				throw new Error(`Problems fetching data ${error}`)
