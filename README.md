@@ -1,6 +1,7 @@
 # sensors.AFRICA-AQ-map-v2
-A new version of air quality map for the Luftdaten.
-You can find a here a [Live Version](https://maps.luftdaten.info/).
+A new version of air quality map for sensors.AFRICA.
+You can find a here a [Live Version](https://v2.map.aq.sensors.africa/).
+Code forked from [Feinstaub Map](https://github.com/opendata-stuttgart/feinstaub-map-v2).
 
 ## Goals and ideas
 * visualise recent sensor data on a map
