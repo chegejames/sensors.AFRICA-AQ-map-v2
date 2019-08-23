@@ -146,7 +146,6 @@ if (query.center) {
 			zoomLevel = 11;
 		}
 		if (typeof zooms[place] !== 'undefined' && zooms[place] !== null) zoomLevel = zooms[place];
-		zoomLevel = zooms[place];
 		console.log("Center: " + coordsCenter);
 		console.log("Zoom: " + zoomLevel);
 	}
