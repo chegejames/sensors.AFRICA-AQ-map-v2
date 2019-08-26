@@ -132,12 +132,9 @@ if (query.center) {
 	coordsCenter = [hash_params[1], hash_params[2]];
 	zoomLevel = hash_params[0].substring(1);
 } else {
-	//Visited city or country subdomain
-	//https://{city or country}.map.aq.sensors.africa
-	//Currently not working
-	//NOT SUPPORTED
-	const hostname = location.hostname;
-	const hostname_parts = hostname.split(".");
+	// Visited city or country subdomain
+	// https://{city or country}.example.com
+	const hostname_parts = location.hostname.split(".");
 	if (hostname_parts.length === 4) {
 		const place = hostname_parts[0].toLowerCase();
 		console.log(place);
