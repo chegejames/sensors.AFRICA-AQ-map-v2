@@ -15,7 +15,6 @@ import {timeFormatLocale, timeParse} from 'd3-time-format';
 import {median} from 'd3-array';
 
 const d3 = Object.assign({}, d3_Selection, d3_Hexbin);
-import querystring from 'querystring';
 
 import api from './feinstaub-api';
 import * as config from './config.js';
@@ -103,10 +102,9 @@ const panelIDs = {
 
 const div = d3.select("#sidebar").append("div").attr("id", "table").style("display", "none");
 
-let coordsCenter = config.center;
-let zoomLevel = config.zoom;
 
-const map = L.map('map', {center: coordsCenter, zoom:zoomLevel, zoomControl: true, minZoom: config.minZoom, maxZoom: config.maxZoom, doubleClickZoom: false});
+
+const map = L.map('map', {zoomControl: true, minZoom: config.minZoom, maxZoom: config.maxZoom, doubleClickZoom: false});
 
 const tiles = L.tileLayer(config.tiles, {
 	attribution: config.attribution,
@@ -116,21 +114,36 @@ const tiles = L.tileLayer(config.tiles, {
 
 new L.Hash(map);
 
-const query = querystring.parse(window.location.search.substring(1));
-if (query.center) {
-	//Coordinates are passed by query
-	// /?center={lat},lng&zoom={zoom}
-	const center = query.center.split(',').map(coord => parseFloat(coord));
-	coordsCenter = center;
-	if (query.zoom) {
-		zoomLevel = parseInt(query.zoom);
+// define query object
+const query = {
+	no_overlay: "false"
+};
+
+// iife function to read query parameter and fill query object
+(function () {
+	let telem;
+	const search_values = location.search.replace('\?', '').split('&');
+	for (let i = 0; i < search_values.length; i++) {
+		telem = search_values[i].split('=');
+		query[telem[0]] = '';
+		if (typeof telem[1] != 'undefined') query[telem[0]] = telem[1];
 	}
-} else if (location.hash) {
+})();
+
+console.log(query.no_overlay)
+// show betterplace overlay
+if (query.no_overlay === "false") d3.select("#betterplace").style("display", "inline-block");
+
+let coordsCenter = config.center;
+let zoomLevel = config.zoom;
+
+ if (location.hash) {
 		// Coordinates are passed by hash path
 	  // /#{zoom}/{lat}/{lng}
 	const hash_params = location.hash.split("/");
 	coordsCenter = [hash_params[1], hash_params[2]];
 	zoomLevel = hash_params[0].substring(1);
+	console.log(zoomLevel)
 } else {
 	//Visited city or country subdomain
 	//https://{city or country}.map.aq.sensors.africa
