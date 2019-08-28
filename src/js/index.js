@@ -130,7 +130,6 @@ const query = {
 	}
 })();
 
-console.log(query.no_overlay)
 // show betterplace overlay
 if (query.no_overlay === "false") d3.select("#betterplace").style("display", "inline-block");
 
@@ -143,7 +142,6 @@ let zoomLevel = config.zoom;
 	const hash_params = location.hash.split("/");
 	coordsCenter = [hash_params[1], hash_params[2]];
 	zoomLevel = hash_params[0].substring(1);
-	console.log(zoomLevel)
 } else {
 	// Visited city or country subdomain
 	// https://{city or country}.example.com
