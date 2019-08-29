@@ -102,8 +102,6 @@ const panelIDs = {
 
 const div = d3.select("#sidebar").append("div").attr("id", "table").style("display", "none");
 
-
-
 const map = L.map('map', {zoomControl: true, minZoom: config.minZoom, maxZoom: config.maxZoom, doubleClickZoom: false});
 
 const tiles = L.tileLayer(config.tiles, {
