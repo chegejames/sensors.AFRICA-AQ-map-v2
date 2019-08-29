@@ -138,7 +138,7 @@ let zoomLevel = config.zoom;
 
  if (location.hash) {
 		// Coordinates are passed by hash path
-	  // /#{zoom}/{lat}/{lng}
+	// /#{zoom}/{lat}/{lng}
 	const hash_params = location.hash.split("/");
 	coordsCenter = [hash_params[1], hash_params[2]];
 	zoomLevel = hash_params[0].substring(1);
