@@ -116,6 +116,7 @@ new L.Hash(map);
 const query = {
 	no_overlay: "false"
 };
+
 // iife function to read query parameter and fill query object
 (function () {
 	let telem;
@@ -133,7 +134,9 @@ if (query.no_overlay === "false") d3.select("#betterplace").style("display", "in
 let coordsCenter = config.center;
 let zoomLevel = config.zoom;
 
-if (location.hash) {
+ if (location.hash) {
+	// Coordinates are passed by hash path
+	// /#{zoom}/{lat}/{lng}
 	const hash_params = location.hash.split("/");
 	coordsCenter = [hash_params[1], hash_params[2]];
 	zoomLevel = hash_params[0].substring(1);
@@ -151,6 +154,12 @@ if (location.hash) {
 		console.log("Zoom: " + zoomLevel);
 	}
 }
+
+// Check if embedded and disable zoom
+if (window != window.top) {
+	map.scrollWheelZoom.disable();
+}
+
 
 window.onload = function () {
 	//	HEXBINS
