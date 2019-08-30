@@ -1,7 +1,7 @@
 {
-  "name": "sensors.africa.feinstaub-map-v2",
+  "name": "sensors.africa-map-v2",
   "version": "1.0.0",
-  "description": "A new map for the Project Luftdaten - Implemented on sensors.AFRICA Map",
+  "description": "A new map for sensors.AFRICA. Based on Luftdaten's.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
