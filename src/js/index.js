@@ -661,7 +661,7 @@ function sensorNr(data) {
 function displayGraph(id) {
 
 	let inner_pre = "";
-	const panel_str = "<iframe src='https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId=<PANELID>&var-node=<SENSOR>' width='290' height='200' frameborder='0'></iframe>";
+	const panel_str = "<iframe src='https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId=<PANELID>&var-node=<SENSOR>' width='380' height='200' frameborder='0'></iframe>";
 	const sens = id.substr(3);
 
 	if (!openedGraph1.includes(sens)) {
@@ -671,7 +671,7 @@ function displayGraph(id) {
 
 		d3.select(iddiv).append("td")
 			.attr("id", "frame_" + sens)
-			.attr("colspan", "2")
+			.attr("colspan", "3")
 			.html((panelIDs[user_selected_value][0] > 0 ? panel_str.replace("<PANELID>", panelIDs[user_selected_value][0]).replace("<SENSOR>", sens) + "<br/>":"") + (panelIDs[user_selected_value][1] > 0 ? panel_str.replace("<PANELID>", panelIDs[user_selected_value][1]).replace("<SENSOR>", sens):""));
 
 		if (user_selected_value !== "Official_AQI_US") inner_pre = "(-) ";
