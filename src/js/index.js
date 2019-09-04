@@ -92,8 +92,8 @@ const titles = {
 };
 
 const panelIDs = {
-	"PM10": [2, 1],
-	"PM25": [2, 1],
+	"PM10": [2, 3],
+	"PM25": [2, 3],
 	"Temperature": [4, 3],
 	"Humidity": [6, 5],
 	"Pressure": [8, 7],
@@ -661,7 +661,7 @@ function sensorNr(data) {
 function displayGraph(id) {
 
 	let inner_pre = "";
-	const panel_str = "<iframe src='https://maps.luftdaten.info/grafana/d-solo/000000004/single-sensor-view?orgId=1&panelId=<PANELID>&var-node=<SENSOR>' width='380' height='200' frameborder='0'></iframe>";
+	const panel_str = "<iframe src='https://grafana.aq.sensors.africa/d-solo/vYpoziaiz/sensors-africa-single-sensor-view?orgId=1&panelId=<PANELID>&var-sensor_id=<SENSOR>' width='380' height='200' frameborder='0'></iframe>";
 	const sens = id.substr(3);
 
 	if (!openedGraph1.includes(sens)) {
